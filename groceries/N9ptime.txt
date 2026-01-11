@@ -1,0 +1,585 @@
+number of threads: 4
+EPR state fin.
+After sweep 1: maxlinkdim=4 maxerr=1.03E-15 current_time=-0.0 time=9.359
+After sweep 2: maxlinkdim=4 maxerr=4.60E-15 current_time=-0.001 time=0.168
+After sweep 3: maxlinkdim=4 maxerr=1.12E-14 current_time=-0.002 time=0.134
+After sweep 4: maxlinkdim=4 maxerr=2.08E-14 current_time=-0.002 time=0.133
+After sweep 5: maxlinkdim=4 maxerr=3.32E-14 current_time=-0.002 time=0.127
+After sweep 6: maxlinkdim=4 maxerr=4.86E-14 current_time=-0.003 time=0.128
+After sweep 7: maxlinkdim=4 maxerr=6.71E-14 current_time=-0.004 time=0.121
+After sweep 8: maxlinkdim=4 maxerr=8.85E-14 current_time=-0.004 time=0.121
+After sweep 9: maxlinkdim=4 maxerr=1.13E-13 current_time=-0.005 time=0.121
+After sweep 10: maxlinkdim=4 maxerr=1.40E-13 current_time=-0.005 time=0.118
+Cooldown fin.
+Beta = 0.01
+After sweep 1:After sweep 1: maxlinkdim=8 maxerr=4.04E-12 maxlinkdim=8 maxerr=4.40E-12 current_time=0.0 - 0.05im time=15.151
+ current_time=0.0 - 0.05im time=15.151
+After sweep 2: maxlinkdim=8 maxerr=7.42E-11 current_time=0.0 - 0.1im time=0.688
+After sweep 2: maxlinkdim=8 maxerr=7.36E-11 current_time=0.0 - 0.1im time=0.698
+TDVP Time spent: 16.041692972183228
+Sum i Time spent: 1.4647421836853027
+T step: 1, Chi(0.1) finished.
+Loop Time spent: 17.506603956222534
+After sweep 1: maxlinkdim=8 maxerr=3.30E-12 current_time=0.0 - 0.05im time=0.656
+After sweep 1: maxlinkdim=8 maxerr=3.31E-12 current_time=0.0 - 0.05im time=0.673
+After sweep 2: maxlinkdim=8 maxerr=2.31E-11 current_time=0.0 - 0.1im time=0.622
+After sweep 2: maxlinkdim=8 maxerr=2.31E-11 current_time=0.0 - 0.1im time=0.614
+TDVP Time spent: 1.2990128993988037
+Sum i Time spent: 0.0055999755859375
+T step: 2, Chi(0.2) finished.
+Loop Time spent: 1.3047499656677246
+After sweep 1: maxlinkdim=8 maxerr=9.77E-11 current_time=0.0 - 0.05im time=0.58
+After sweep 1: maxlinkdim=8 maxerr=9.78E-11 current_time=0.0 - 0.05im time=0.593
+After sweep 2: maxlinkdim=10 maxerr=8.40E-11 current_time=0.0 - 0.1im time=0.637
+After sweep 2: maxlinkdim=10 maxerr=8.40E-11 current_time=0.0 - 0.1im time=0.652
+TDVP Time spent: 1.2516119480133057
+Sum i Time spent: 0.005892038345336914
+T step: 3, Chi(0.30000000000000004) finished.
+Loop Time spent: 1.257694959640503
+After sweep 1: maxlinkdim=12 maxerr=9.76E-11 current_time=0.0 - 0.05im time=0.736
+After sweep 1: maxlinkdim=12 maxerr=9.76E-11 current_time=0.0 - 0.05im time=0.766
+After sweep 2: maxlinkdim=15 maxerr=1.00E-10 current_time=0.0 - 0.1im time=0.87
+After sweep 2: maxlinkdim=15 maxerr=5.56E-11 current_time=0.0 - 0.1im time=0.865
+TDVP Time spent: 1.643631935119629
+Sum i Time spent: 0.01686406135559082
+T step: 4, Chi(0.4) finished.
+Loop Time spent: 1.6606957912445068
+After sweep 1: maxlinkdim=16 maxerr=8.14E-11 current_time=0.0 - 0.05im time=1.285
+After sweep 1: maxlinkdim=16 maxerr=8.17E-11 current_time=0.0 - 0.05im time=1.363
+After sweep 2: maxlinkdim=16 maxerr=5.29E-11 current_time=0.0 - 0.1im time=1.068
+After sweep 2: maxlinkdim=16 maxerr=5.31E-11 current_time=0.0 - 0.1im time=1.044
+TDVP Time spent: 2.432332992553711
+Sum i Time spent: 0.015411138534545898
+T step: 5, Chi(0.5) finished.
+Loop Time spent: 2.4479479789733887
+After sweep 1: maxlinkdim=16 maxerr=9.74E-11 current_time=0.0 - 0.05im time=1.065
+After sweep 1: maxlinkdim=16 maxerr=9.75E-11 current_time=0.0 - 0.05im time=1.104
+After sweep 2: maxlinkdim=16 maxerr=8.24E-12 current_time=0.0 - 0.1im time=1.241
+After sweep 2: maxlinkdim=16 maxerr=8.27E-12 current_time=0.0 - 0.1im time=1.243
+TDVP Time spent: 2.3539178371429443
+Sum i Time spent: 0.015326976776123047
+T step: 6, Chi(0.6000000000000001) finished.
+Loop Time spent: 2.369408130645752
+After sweep 1: maxlinkdim=16 maxerr=1.99E-11 current_time=0.0 - 0.05im time=1.049
+After sweep 1: maxlinkdim=16 maxerr=1.98E-11 current_time=0.0 - 0.05im time=1.083
+After sweep 2: maxlinkdim=16 maxerr=4.38E-11 current_time=0.0 - 0.1im time=1.19
+After sweep 2: maxlinkdim=16 maxerr=4.36E-11 current_time=0.0 - 0.1im time=1.212
+TDVP Time spent: 2.4069838523864746
+Sum i Time spent: 0.0066530704498291016
+T step: 7, Chi(0.7000000000000001) finished.
+Loop Time spent: 2.413774013519287
+After sweep 1: maxlinkdim=16 maxerr=8.95E-11 current_time=0.0 - 0.05im time=1.067
+After sweep 1: maxlinkdim=16 maxerr=8.98E-11 current_time=0.0 - 0.05im time=1.115
+After sweep 2: maxlinkdim=16 maxerr=6.94E-11 current_time=0.0 - 0.1im time=1.319
+After sweep 2: maxlinkdim=16 maxerr=6.93E-11 current_time=0.0 - 0.1im time=1.286
+TDVP Time spent: 2.4811110496520996
+Sum i Time spent: 0.007684946060180664
+T step: 8, Chi(0.8) finished.
+Loop Time spent: 2.4889330863952637
+After sweep 1: maxlinkdim=18 maxerr=8.67E-11 current_time=0.0 - 0.05im time=1.322
+After sweep 1: maxlinkdim=18 maxerr=8.61E-11 current_time=0.0 - 0.05im time=1.375
+After sweep 2: maxlinkdim=20 maxerr=9.58E-11 current_time=0.0 - 0.1im time=1.646
+After sweep 2: maxlinkdim=20 maxerr=9.73E-11 current_time=0.0 - 0.1im time=1.63
+TDVP Time spent: 3.012470006942749
+Sum i Time spent: 0.008471012115478516
+T step: 9, Chi(0.9) finished.
+Loop Time spent: 3.0210859775543213
+After sweep 1: maxlinkdim=21 maxerr=9.64E-11 current_time=0.0 - 0.05im time=1.808
+After sweep 1: maxlinkdim=21 maxerr=9.68E-11 current_time=0.0 - 0.05im time=1.862
+After sweep 2: maxlinkdim=22 maxerr=9.80E-11 current_time=0.0 - 0.1im time=1.911
+After sweep 2: maxlinkdim=22 maxerr=9.83E-11 current_time=0.0 - 0.1im time=1.942
+TDVP Time spent: 3.810023069381714
+Sum i Time spent: 0.012781143188476562
+T step: 10, Chi(1.0) finished.
+Loop Time spent: 3.8231821060180664
+
+number of threads: 4
+EPR state fin.
+After sweep 1: maxlinkdim=4 maxerr=1.03E-15 current_time=-0.0 time=9.286
+After sweep 2: maxlinkdim=4 maxerr=4.60E-15 current_time=-0.001 time=0.151
+After sweep 3: maxlinkdim=4 maxerr=1.12E-14 current_time=-0.002 time=0.126
+After sweep 4: maxlinkdim=4 maxerr=2.08E-14 current_time=-0.002 time=0.124
+After sweep 5: maxlinkdim=4 maxerr=3.32E-14 current_time=-0.002 time=0.128
+After sweep 6: maxlinkdim=4 maxerr=4.86E-14 current_time=-0.003 time=0.124
+After sweep 7: maxlinkdim=4 maxerr=6.71E-14 current_time=-0.004 time=0.122
+After sweep 8: maxlinkdim=4 maxerr=8.85E-14 current_time=-0.004 time=0.119
+After sweep 9: maxlinkdim=4 maxerr=1.13E-13 current_time=-0.005 time=0.123
+After sweep 10: maxlinkdim=4 maxerr=1.40E-13 current_time=-0.005 time=0.117
+Cooldown fin.
+Beta = 0.01
+After sweep 1: maxlinkdim=8 maxerr=4.40E-12 current_time=0.0 - 0.05im time=15.356
+After sweep 2: maxlinkdim=8 maxerr=7.42E-11 current_time=0.0 - 0.1im time=0.6
+TDVP Time spent: 16.162266969680786
+Live memory: 219.935146 MB
+Sum i Time spent: 1.3413159847259521
+T step: 1, Chi(0.1) finished.
+Loop Time spent: 28.149681091308594
+After sweep 1: maxlinkdim=8 maxerr=3.31E-12 current_time=0.0 - 0.05im time=0.982
+After sweep 2: maxlinkdim=8 maxerr=2.31E-11 current_time=0.0 - 0.1im time=0.615
+TDVP Time spent: 1.6466281414031982
+Live memory: 220.474519 MB
+Sum i Time spent: 0.0057811737060546875
+T step: 2, Chi(0.2) finished.
+Loop Time spent: 10.621096134185791
+After sweep 1: maxlinkdim=8 maxerr=9.77E-11 current_time=0.0 - 0.05im time=0.866
+After sweep 2: maxlinkdim=10 maxerr=8.40E-11 current_time=0.0 - 0.1im time=0.781
+TDVP Time spent: 1.6622090339660645
+Live memory: 220.474519 MB
+Sum i Time spent: 0.006651878356933594
+T step: 3, Chi(0.30000000000000004) finished.
+Loop Time spent: 10.170024156570435
+After sweep 1: maxlinkdim=12 maxerr=9.76E-11 current_time=0.0 - 0.05im time=0.887
+After sweep 2: maxlinkdim=15 maxerr=1.00E-10 current_time=0.0 - 0.1im time=0.807
+TDVP Time spent: 1.760310173034668
+Live memory: 220.474519 MB
+Sum i Time spent: 0.0067291259765625
+T step: 4, Chi(0.4) finished.
+Loop Time spent: 10.573255062103271
+After sweep 1: maxlinkdim=16 maxerr=8.17E-11 current_time=0.0 - 0.05im time=1.128
+After sweep 2: maxlinkdim=16 maxerr=5.31E-11 current_time=0.0 - 0.1im time=1.027
+TDVP Time spent: 2.285512924194336
+Live memory: 220.474519 MB
+Sum i Time spent: 0.007037162780761719
+T step: 5, Chi(0.5) finished.
+Loop Time spent: 11.120321035385132
+After sweep 1: maxlinkdim=16 maxerr=9.74E-11 current_time=0.0 - 0.05im time=1.245
+After sweep 2: maxlinkdim=16 maxerr=8.24E-12 current_time=0.0 - 0.1im time=1.216
+TDVP Time spent: 2.5114991664886475
+Live memory: 220.474519 MB
+Sum i Time spent: 0.010483026504516602
+T step: 6, Chi(0.6000000000000001) finished.
+Loop Time spent: 11.05425500869751
+After sweep 1: maxlinkdim=16 maxerr=1.98E-11 current_time=0.0 - 0.05im time=1.475
+After sweep 2: maxlinkdim=16 maxerr=4.36E-11 current_time=0.0 - 0.1im time=1.286
+TDVP Time spent: 2.768982172012329
+Live memory: 220.474519 MB
+Sum i Time spent: 0.00848698616027832
+T step: 7, Chi(0.7000000000000001) finished.
+Loop Time spent: 11.494724988937378
+After sweep 1: maxlinkdim=16 maxerr=8.95E-11 current_time=0.0 - 0.05im time=1.488
+After sweep 2: maxlinkdim=16 maxerr=6.94E-11 current_time=0.0 - 0.1im time=1.348
+TDVP Time spent: 2.851958990097046
+Live memory: 220.474519 MB
+Sum i Time spent: 0.00861501693725586
+T step: 8, Chi(0.8) finished.
+Loop Time spent: 11.37551498413086
+After sweep 1: maxlinkdim=18 maxerr=8.61E-11 current_time=0.0 - 0.05im time=1.666
+After sweep 2: maxlinkdim=20 maxerr=9.73E-11 current_time=0.0 - 0.1im time=1.645
+TDVP Time spent: 3.3323330879211426
+Live memory: 220.474519 MB
+Sum i Time spent: 0.010549068450927734
+T step: 9, Chi(0.9) finished.
+Loop Time spent: 12.091660022735596
+After sweep 1: maxlinkdim=21 maxerr=9.68E-11 current_time=0.0 - 0.05im time=2.056
+After sweep 2: maxlinkdim=22 maxerr=9.83E-11 current_time=0.0 - 0.1im time=2.011
+TDVP Time spent: 4.1204869747161865
+Live memory: 220.474519 MB
+Sum i Time spent: 0.009922027587890625
+T step: 10, Chi(1.0) finished.
+Loop Time spent: 12.853919982910156
+After sweep 1: maxlinkdim=25 maxerr=9.18E-11 current_time=0.0 - 0.05im time=2.458
+After sweep 2: maxlinkdim=26 maxerr=8.77E-11 current_time=0.0 - 0.1im time=2.181
+TDVP Time spent: 4.652354001998901
+Live memory: 220.474519 MB
+Sum i Time spent: 0.00966501235961914
+T step: 11, Chi(1.1) finished.
+Loop Time spent: 13.731680870056152
+After sweep 1: maxlinkdim=28 maxerr=9.50E-11 current_time=0.0 - 0.05im time=2.469
+After sweep 2: maxlinkdim=30 maxerr=9.94E-11 current_time=0.0 - 0.1im time=2.567
+TDVP Time spent: 5.098505020141602
+Live memory: 220.474519 MB
+Sum i Time spent: 0.013509035110473633
+T step: 12, Chi(1.2000000000000002) finished.
+Loop Time spent: 13.992704153060913
+After sweep 1: maxlinkdim=31 maxerr=9.80E-11 current_time=0.0 - 0.05im time=2.975
+After sweep 2: maxlinkdim=31 maxerr=9.60E-11 current_time=0.0 - 0.1im time=2.931
+TDVP Time spent: 6.080830097198486
+Live memory: 220.474519 MB
+Sum i Time spent: 0.011263132095336914
+T step: 13, Chi(1.3) finished.
+Loop Time spent: 15.046005010604858
+After sweep 1: maxlinkdim=32 maxerr=9.33E-11 current_time=0.0 - 0.05im time=3.323
+After sweep 2: maxlinkdim=32 maxerr=8.17E-11 current_time=0.0 - 0.1im time=2.882
+TDVP Time spent: 6.215594053268433
+Live memory: 220.474519 MB
+Sum i Time spent: 0.010948896408081055
+T step: 14, Chi(1.4000000000000001) finished.
+Loop Time spent: 15.0887930393219
+After sweep 1: maxlinkdim=32 maxerr=9.61E-11 current_time=0.0 - 0.05im time=3.225
+After sweep 2: maxlinkdim=33 maxerr=9.43E-11 current_time=0.0 - 0.1im time=3.351
+TDVP Time spent: 6.583091974258423
+Live memory: 220.474519 MB
+Sum i Time spent: 0.013579845428466797
+T step: 15, Chi(1.5) finished.
+Loop Time spent: 15.255059003829956
+After sweep 1: maxlinkdim=34 maxerr=7.53E-11 current_time=0.0 - 0.05im time=3.333
+After sweep 2: maxlinkdim=35 maxerr=9.64E-11 current_time=0.0 - 0.1im time=3.594
+TDVP Time spent: 7.017514944076538
+Live memory: 220.474519 MB
+Sum i Time spent: 0.018007993698120117
+T step: 16, Chi(1.6) finished.
+Loop Time spent: 15.861195802688599
+After sweep 1: maxlinkdim=36 maxerr=9.07E-11 current_time=0.0 - 0.05im time=3.739
+After sweep 2: maxlinkdim=37 maxerr=9.16E-11 current_time=0.0 - 0.1im time=4.109
+TDVP Time spent: 7.858833074569702
+Live memory: 220.474519 MB
+Sum i Time spent: 0.02620410919189453
+T step: 17, Chi(1.7000000000000002) finished.
+Loop Time spent: 16.58909797668457
+After sweep 1: maxlinkdim=38 maxerr=9.92E-11 current_time=0.0 - 0.05im time=3.829
+After sweep 2: maxlinkdim=39 maxerr=9.43E-11 current_time=0.0 - 0.1im time=4.543
+TDVP Time spent: 8.542992115020752
+Live memory: 220.474519 MB
+Sum i Time spent: 0.01923394203186035
+T step: 18, Chi(1.8) finished.
+Loop Time spent: 17.537036895751953
+After sweep 1: maxlinkdim=40 maxerr=8.59E-11 current_time=0.0 - 0.05im time=4.188
+After sweep 2: maxlinkdim=40 maxerr=1.32E-10 current_time=0.0 - 0.1im time=4.807
+TDVP Time spent: 9.233345031738281
+Live memory: 220.474519 MB
+Sum i Time spent: 0.02084517478942871
+T step: 19, Chi(1.9000000000000001) finished.
+Loop Time spent: 18.001374006271362
+After sweep 1: maxlinkdim=40 maxerr=1.98E-10 current_time=0.0 - 0.05im time=4.408
+After sweep 2: maxlinkdim=40 maxerr=2.96E-10 current_time=0.0 - 0.1im time=4.885
+TDVP Time spent: 9.373190879821777
+Live memory: 220.474519 MB
+Sum i Time spent: 0.023131132125854492
+T step: 20, Chi(2.0) finished.
+Loop Time spent: 18.04698610305786
+After sweep 1: maxlinkdim=40 maxerr=4.34E-10 current_time=0.0 - 0.05im time=4.28
+After sweep 2: maxlinkdim=40 maxerr=6.28E-10 current_time=0.0 - 0.1im time=4.965
+TDVP Time spent: 9.339349031448364
+Live memory: 220.474519 MB
+Sum i Time spent: 0.026170015335083008
+T step: 21, Chi(2.1) finished.
+Loop Time spent: 18.069386959075928
+After sweep 1: maxlinkdim=40 maxerr=8.95E-10 current_time=0.0 - 0.05im time=4.128
+After sweep 2: maxlinkdim=40 maxerr=1.26E-09 current_time=0.0 - 0.1im time=4.869
+TDVP Time spent: 9.288774967193604
+Live memory: 220.474519 MB
+Sum i Time spent: 0.03333306312561035
+T step: 22, Chi(2.2) finished.
+Loop Time spent: 17.93097186088562
+After sweep 1: maxlinkdim=40 maxerr=1.75E-09 current_time=0.0 - 0.05im time=4.297
+After sweep 2: maxlinkdim=40 maxerr=2.41E-09 current_time=0.0 - 0.1im time=4.8
+TDVP Time spent: 9.341104984283447
+Live memory: 220.474519 MB
+Sum i Time spent: 0.03331494331359863
+T step: 23, Chi(2.3000000000000003) finished.
+Loop Time spent: 18.561532974243164
+After sweep 1: maxlinkdim=40 maxerr=3.28E-09 current_time=0.0 - 0.05im time=4.499
+After sweep 2: maxlinkdim=40 maxerr=4.42E-09 current_time=0.0 - 0.1im time=4.999
+TDVP Time spent: 9.510103940963745
+Live memory: 220.474519 MB
+Sum i Time spent: 0.026306867599487305
+T step: 24, Chi(2.4000000000000004) finished.
+Loop Time spent: 18.123525857925415
+After sweep 1: maxlinkdim=40 maxerr=5.90E-09 current_time=0.0 - 0.05im time=4.168
+After sweep 2: maxlinkdim=40 maxerr=7.81E-09 current_time=0.0 - 0.1im time=4.852
+TDVP Time spent: 9.276462078094482
+Live memory: 220.474519 MB
+Sum i Time spent: 0.03191995620727539
+T step: 25, Chi(2.5) finished.
+Loop Time spent: 18.033705949783325
+After sweep 1: maxlinkdim=40 maxerr=1.02E-08 current_time=0.0 - 0.05im time=4.285
+After sweep 2: maxlinkdim=40 maxerr=1.33E-08 current_time=0.0 - 0.1im time=5.021
+TDVP Time spent: 9.465704917907715
+Live memory: 220.474519 MB
+Sum i Time spent: 0.046076059341430664
+T step: 26, Chi(2.6) finished.
+Loop Time spent: 18.435667991638184
+After sweep 1: maxlinkdim=40 maxerr=1.72E-08 current_time=0.0 - 0.05im time=4.662
+After sweep 2: maxlinkdim=40 maxerr=2.21E-08 current_time=0.0 - 0.1im time=4.846
+TDVP Time spent: 9.554098844528198
+Live memory: 220.474519 MB
+Sum i Time spent: 0.019681930541992188
+T step: 27, Chi(2.7) finished.
+Loop Time spent: 18.538578987121582
+After sweep 1: maxlinkdim=40 maxerr=2.82E-08 current_time=0.0 - 0.05im time=4.439
+After sweep 2: maxlinkdim=40 maxerr=3.56E-08 current_time=0.0 - 0.1im time=4.873
+TDVP Time spent: 9.472933053970337
+Live memory: 220.474519 MB
+Sum i Time spent: 0.02206897735595703
+T step: 28, Chi(2.8000000000000003) finished.
+Loop Time spent: 18.6961030960083
+After sweep 1: maxlinkdim=40 maxerr=4.48E-08 current_time=0.0 - 0.05im time=4.601
+After sweep 2: maxlinkdim=40 maxerr=5.59E-08 current_time=0.0 - 0.1im time=4.856
+TDVP Time spent: 9.465592861175537
+Live memory: 220.474519 MB
+Sum i Time spent: 0.03116011619567871
+T step: 29, Chi(2.9000000000000004) finished.
+Loop Time spent: 18.321107864379883
+After sweep 1: maxlinkdim=40 maxerr=6.94E-08 current_time=0.0 - 0.05im time=4.528
+After sweep 2: maxlinkdim=40 maxerr=8.56E-08 current_time=0.0 - 0.1im time=5.022
+TDVP Time spent: 9.586114168167114
+Live memory: 220.474519 MB
+Sum i Time spent: 0.04063010215759277
+T step: 30, Chi(3.0) finished.
+Loop Time spent: 18.34606695175171
+After sweep 1: maxlinkdim=40 maxerr=1.05E-07 current_time=0.0 - 0.05im time=4.291
+After sweep 2: maxlinkdim=40 maxerr=1.28E-07 current_time=0.0 - 0.1im time=4.857
+TDVP Time spent: 9.506916046142578
+Live memory: 220.474519 MB
+Sum i Time spent: 0.020793914794921875
+T step: 31, Chi(3.1) finished.
+Loop Time spent: 18.465370178222656
+After sweep 1: maxlinkdim=40 maxerr=1.55E-07 current_time=0.0 - 0.05im time=4.482
+After sweep 2: maxlinkdim=40 maxerr=1.88E-07 current_time=0.0 - 0.1im time=4.915
+TDVP Time spent: 9.403703212738037
+Live memory: 220.474519 MB
+Sum i Time spent: 0.028903961181640625
+T step: 32, Chi(3.2) finished.
+Loop Time spent: 18.191851139068604
+After sweep 1: maxlinkdim=40 maxerr=2.25E-07 current_time=0.0 - 0.05im time=4.596
+After sweep 2: maxlinkdim=40 maxerr=2.69E-07 current_time=0.0 - 0.1im time=5.014
+TDVP Time spent: 9.75620985031128
+Live memory: 220.474519 MB
+Sum i Time spent: 0.031722068786621094
+T step: 33, Chi(3.3000000000000003) finished.
+Loop Time spent: 18.94832682609558
+
+number of threads: 8
+EPR state fin.
+After sweep 1: maxlinkdim=4 maxerr=1.03E-15 current_time=-0.0 time=12.996
+After sweep 2: maxlinkdim=4 maxerr=4.60E-15 current_time=-0.001 time=0.209
+After sweep 3: maxlinkdim=4 maxerr=1.12E-14 current_time=-0.002 time=0.19
+After sweep 4: maxlinkdim=4 maxerr=2.08E-14 current_time=-0.002 time=0.225
+After sweep 5: maxlinkdim=4 maxerr=3.32E-14 current_time=-0.002 time=0.191
+After sweep 6: maxlinkdim=4 maxerr=4.86E-14 current_time=-0.003 time=0.196
+After sweep 7: maxlinkdim=4 maxerr=6.71E-14 current_time=-0.004 time=0.196
+After sweep 8: maxlinkdim=4 maxerr=8.85E-14 current_time=-0.004 time=0.168
+After sweep 9: maxlinkdim=4 maxerr=1.13E-13 current_time=-0.005 time=0.164
+After sweep 10: maxlinkdim=4 maxerr=1.40E-13 current_time=-0.005 time=0.165
+Cooldown fin.
+Beta = 0.01
+After sweep 1: maxlinkdim=8 maxerr=4.40E-12 current_time=0.0 - 0.05im time=22.674
+After sweep 2: maxlinkdim=8 maxerr=7.42E-11 current_time=0.0 - 0.1im time=0.733
+TDVP Time spent: 23.675490140914917
+Live memory: 219.915732 MB
+Sum i Time spent: 2.0190351009368896
+T step: 1, Chi(0.1) finished.
+Loop Time spent: 40.40642499923706
+After sweep 1: maxlinkdim=8 maxerr=3.31E-12 current_time=0.0 - 0.05im time=1.387
+After sweep 2: maxlinkdim=8 maxerr=2.31E-11 current_time=0.0 - 0.1im time=0.823
+TDVP Time spent: 2.256129026412964
+Live memory: 220.454929 MB
+Sum i Time spent: 0.024519920349121094
+T step: 2, Chi(0.2) finished.
+Loop Time spent: 14.796061038970947
+After sweep 1: maxlinkdim=8 maxerr=9.77E-11 current_time=0.0 - 0.05im time=1.347
+After sweep 2: maxlinkdim=10 maxerr=8.40E-11 current_time=0.0 - 0.1im time=0.81
+TDVP Time spent: 2.234520196914673
+Live memory: 220.454929 MB
+Sum i Time spent: 0.12000012397766113
+T step: 3, Chi(0.30000000000000004) finished.
+Loop Time spent: 15.176247119903564
+After sweep 1: maxlinkdim=12 maxerr=9.76E-11 current_time=0.0 - 0.05im time=1.408
+After sweep 2: maxlinkdim=15 maxerr=1.00E-10 current_time=0.0 - 0.1im time=1.045
+TDVP Time spent: 2.504122018814087
+Live memory: 220.454929 MB
+Sum i Time spent: 0.022716999053955078
+T step: 4, Chi(0.4) finished.
+Loop Time spent: 15.932914018630981
+After sweep 1: maxlinkdim=16 maxerr=8.17E-11 current_time=0.0 - 0.05im time=1.811
+After sweep 2: maxlinkdim=16 maxerr=5.31E-11 current_time=0.0 - 0.1im time=1.33
+TDVP Time spent: 3.22013521194458
+Live memory: 220.454929 MB
+Sum i Time spent: 0.010697126388549805
+T step: 5, Chi(0.5) finished.
+Loop Time spent: 18.182879209518433
+After sweep 1: maxlinkdim=16 maxerr=9.74E-11 current_time=0.0 - 0.05im time=1.879
+After sweep 2: maxlinkdim=16 maxerr=8.24E-12 current_time=0.0 - 0.1im time=1.389
+TDVP Time spent: 3.3096420764923096
+Live memory: 220.454929 MB
+Sum i Time spent: 0.03811001777648926
+T step: 6, Chi(0.6000000000000001) finished.
+Loop Time spent: 18.318109035491943
+After sweep 1: maxlinkdim=16 maxerr=1.98E-11 current_time=0.0 - 0.05im time=1.872
+After sweep 2: maxlinkdim=16 maxerr=4.36E-11 current_time=0.0 - 0.1im time=1.42
+TDVP Time spent: 3.2977540493011475
+Live memory: 220.454929 MB
+Sum i Time spent: 0.011142969131469727
+T step: 7, Chi(0.7000000000000001) finished.
+Loop Time spent: 17.619827032089233
+After sweep 1: maxlinkdim=16 maxerr=8.95E-11 current_time=0.0 - 0.05im time=1.935
+After sweep 2: maxlinkdim=16 maxerr=6.94E-11 current_time=0.0 - 0.1im time=1.449
+TDVP Time spent: 3.389756917953491
+Live memory: 220.454929 MB
+Sum i Time spent: 0.014874935150146484
+T step: 8, Chi(0.8) finished.
+Loop Time spent: 16.001828908920288
+After sweep 1: maxlinkdim=18 maxerr=8.61E-11 current_time=0.0 - 0.05im time=2.058
+After sweep 2: maxlinkdim=20 maxerr=9.73E-11 current_time=0.0 - 0.1im time=2.01
+TDVP Time spent: 4.328682899475098
+Live memory: 220.454929 MB
+Sum i Time spent: 0.012876033782958984
+T step: 9, Chi(0.9) finished.
+Loop Time spent: 19.966028928756714
+After sweep 1: maxlinkdim=21 maxerr=9.68E-11 current_time=0.0 - 0.05im time=2.816
+After sweep 2: maxlinkdim=22 maxerr=9.83E-11 current_time=0.0 - 0.1im time=2.616
+TDVP Time spent: 5.457787036895752
+Live memory: 220.454929 MB
+Sum i Time spent: 0.012687921524047852
+T step: 10, Chi(1.0) finished.
+Loop Time spent: 18.547082901000977
+After sweep 1: maxlinkdim=25 maxerr=9.18E-11 current_time=0.0 - 0.05im time=3.122
+After sweep 2: maxlinkdim=26 maxerr=8.77E-11 current_time=0.0 - 0.1im time=2.926
+TDVP Time spent: 6.0630481243133545
+Live memory: 220.454929 MB
+Sum i Time spent: 0.015872955322265625
+T step: 11, Chi(1.1) finished.
+Loop Time spent: 20.623831033706665
+After sweep 1: maxlinkdim=28 maxerr=9.50E-11 current_time=0.0 - 0.05im time=3.405
+After sweep 2: maxlinkdim=30 maxerr=9.94E-11 current_time=0.0 - 0.1im time=3.353
+TDVP Time spent: 6.787946939468384
+Live memory: 220.454929 MB
+Sum i Time spent: 0.021938085556030273
+T step: 12, Chi(1.2000000000000002) finished.
+Loop Time spent: 22.155554056167603
+After sweep 1: maxlinkdim=31 maxerr=9.80E-11 current_time=0.0 - 0.05im time=4.136
+After sweep 2: maxlinkdim=31 maxerr=9.60E-11 current_time=0.0 - 0.1im time=3.601
+TDVP Time spent: 7.783514022827148
+Live memory: 220.454929 MB
+Sum i Time spent: 0.019224166870117188
+T step: 13, Chi(1.3) finished.
+Loop Time spent: 21.796140909194946
+After sweep 1: maxlinkdim=32 maxerr=9.33E-11 current_time=0.0 - 0.05im time=4.511
+After sweep 2: maxlinkdim=32 maxerr=8.17E-11 current_time=0.0 - 0.1im time=3.876
+TDVP Time spent: 8.396820068359375
+
+BLAS = 1
+number of threads: 4
+EPR state fin.
+After sweep 1: maxlinkdim=4 maxerr=1.03E-15 current_time=-0.0 time=9.162
+After sweep 2: maxlinkdim=4 maxerr=4.60E-15 current_time=-0.001 time=0.148
+After sweep 3: maxlinkdim=4 maxerr=1.12E-14 current_time=-0.002 time=0.157
+After sweep 4: maxlinkdim=4 maxerr=2.08E-14 current_time=-0.002 time=0.137
+After sweep 5: maxlinkdim=4 maxerr=3.32E-14 current_time=-0.002 time=0.13
+After sweep 6: maxlinkdim=4 maxerr=4.86E-14 current_time=-0.003 time=0.134
+After sweep 7: maxlinkdim=4 maxerr=6.71E-14 current_time=-0.004 time=0.126
+After sweep 8: maxlinkdim=4 maxerr=8.85E-14 current_time=-0.004 time=0.14
+After sweep 9: maxlinkdim=4 maxerr=1.13E-13 current_time=-0.005 time=0.124
+After sweep 10: maxlinkdim=4 maxerr=1.40E-13 current_time=-0.005 time=0.136
+Cooldown fin.
+Beta = 0.01
+After sweep 1: maxlinkdim=8 maxerr=4.40E-12 current_time=0.0 - 0.05im time=16.596
+After sweep 2: maxlinkdim=8 maxerr=7.42E-11 current_time=0.0 - 0.1im time=0.605
+TDVP Time spent: 17.459413051605225
+Sum i Time spent: 1.4196650981903076
+T step: 1, Chi(0.1) finished.
+Loop Time spent: 18.879273891448975
+After sweep 1: maxlinkdim=8 maxerr=3.31E-12 current_time=0.0 - 0.05im time=0.711
+After sweep 2: maxlinkdim=8 maxerr=2.31E-11 current_time=0.0 - 0.1im time=0.633
+TDVP Time spent: 1.3623840808868408
+Sum i Time spent: 0.006621122360229492
+T step: 2, Chi(0.2) finished.
+Loop Time spent: 1.3692479133605957
+After sweep 1: maxlinkdim=8 maxerr=9.77E-11 current_time=0.0 - 0.05im time=0.658
+After sweep 2: maxlinkdim=10 maxerr=8.40E-11 current_time=0.0 - 0.1im time=0.652
+TDVP Time spent: 1.3226301670074463
+Sum i Time spent: 0.007887125015258789
+T step: 3, Chi(0.30000000000000004) finished.
+Loop Time spent: 1.3307249546051025
+After sweep 1: maxlinkdim=12 maxerr=9.76E-11 current_time=0.0 - 0.05im time=0.717
+After sweep 2: maxlinkdim=15 maxerr=1.00E-10 current_time=0.0 - 0.1im time=0.822
+TDVP Time spent: 1.5518720149993896
+Sum i Time spent: 0.006953001022338867
+T step: 4, Chi(0.4) finished.
+Loop Time spent: 1.5590100288391113
+After sweep 1: maxlinkdim=16 maxerr=8.17E-11 current_time=0.0 - 0.05im time=1.166
+After sweep 2: maxlinkdim=16 maxerr=5.31E-11 current_time=0.0 - 0.1im time=1.019
+TDVP Time spent: 2.1986231803894043
+Sum i Time spent: 0.025897979736328125
+T step: 5, Chi(0.5) finished.
+Loop Time spent: 2.224720001220703
+After sweep 1: maxlinkdim=16 maxerr=9.74E-11 current_time=0.0 - 0.05im time=0.986
+After sweep 2: maxlinkdim=16 maxerr=8.24E-12 current_time=0.0 - 0.1im time=1.257
+TDVP Time spent: 2.2678909301757812
+Sum i Time spent: 0.02036309242248535
+T step: 6, Chi(0.6000000000000001) finished.
+Loop Time spent: 2.288402795791626
+After sweep 1: maxlinkdim=16 maxerr=1.98E-11 current_time=0.0 - 0.05im time=1.179
+After sweep 2: maxlinkdim=16 maxerr=4.36E-11 current_time=0.0 - 0.1im time=1.373
+TDVP Time spent: 2.576738119125366
+Sum i Time spent: 0.009605884552001953
+T step: 7, Chi(0.7000000000000001) finished.
+Loop Time spent: 2.586493968963623
+After sweep 1: maxlinkdim=16 maxerr=8.95E-11 current_time=0.0 - 0.05im time=1.048
+After sweep 2: maxlinkdim=16 maxerr=6.94E-11 current_time=0.0 - 0.1im time=1.05
+TDVP Time spent: 2.134382963180542
+Sum i Time spent: 0.007654905319213867
+T step: 8, Chi(0.8) finished.
+Loop Time spent: 2.142198085784912
+After sweep 1: maxlinkdim=18 maxerr=8.61E-11 current_time=0.0 - 0.05im time=1.208
+After sweep 2: maxlinkdim=20 maxerr=9.73E-11 current_time=0.0 - 0.1im time=1.678
+TDVP Time spent: 2.964639902114868
+Sum i Time spent: 0.01427602767944336
+T step: 9, Chi(0.9) finished.
+Loop Time spent: 2.979058027267456
+After sweep 1: maxlinkdim=21 maxerr=9.68E-11 current_time=0.0 - 0.05im time=1.401
+After sweep 2: maxlinkdim=22 maxerr=9.83E-11 current_time=0.0 - 0.1im time=1.444
+TDVP Time spent: 2.8637421131134033
+Sum i Time spent: 0.00878596305847168
+T step: 10, Chi(1.0) finished.
+Loop Time spent: 2.8726961612701416
+After sweep 1: maxlinkdim=25 maxerr=9.18E-11 current_time=0.0 - 0.05im time=1.491
+After sweep 2: maxlinkdim=26 maxerr=8.77E-11 current_time=0.0 - 0.1im time=1.666
+TDVP Time spent: 3.254387140274048
+Sum i Time spent: 0.014300823211669922
+T step: 11, Chi(1.1) finished.
+Loop Time spent: 3.268831968307495
+After sweep 1: maxlinkdim=28 maxerr=9.50E-11 current_time=0.0 - 0.05im time=1.647
+After sweep 2: maxlinkdim=30 maxerr=9.94E-11 current_time=0.0 - 0.1im time=2.302
+TDVP Time spent: 3.955156087875366
+Sum i Time spent: 0.011583805084228516
+T step: 12, Chi(1.2000000000000002) finished.
+Loop Time spent: 3.9669010639190674
+After sweep 1: maxlinkdim=31 maxerr=9.80E-11 current_time=0.0 - 0.05im time=2.308
+After sweep 2: maxlinkdim=31 maxerr=9.60E-11 current_time=0.0 - 0.1im time=1.974
+TDVP Time spent: 4.318619966506958
+Sum i Time spent: 0.011193037033081055
+T step: 13, Chi(1.3) finished.
+Loop Time spent: 4.329949855804443
+After sweep 1: maxlinkdim=32 maxerr=9.33E-11 current_time=0.0 - 0.05im time=2.42
+After sweep 2: maxlinkdim=32 maxerr=8.17E-11 current_time=0.0 - 0.1im time=2.083
+TDVP Time spent: 4.566158056259155
+Sum i Time spent: 0.02024388313293457
+T step: 14, Chi(1.4000000000000001) finished.
+Loop Time spent: 4.586554050445557
+After sweep 1: maxlinkdim=32 maxerr=9.61E-11 current_time=0.0 - 0.05im time=2.195
+After sweep 2: maxlinkdim=33 maxerr=9.43E-11 current_time=0.0 - 0.1im time=2.286
+TDVP Time spent: 4.508531093597412
+Sum i Time spent: 0.022549867630004883
+T step: 15, Chi(1.5) finished.
+Loop Time spent: 4.531233072280884
+After sweep 1: maxlinkdim=34 maxerr=7.53E-11 current_time=0.0 - 0.05im time=2.126
+After sweep 2: maxlinkdim=35 maxerr=9.64E-11 current_time=0.0 - 0.1im time=2.41
+TDVP Time spent: 4.632194995880127
+Sum i Time spent: 0.01735687255859375
+T step: 16, Chi(1.6) finished.
+Loop Time spent: 4.649694919586182
+After sweep 1: maxlinkdim=36 maxerr=9.07E-11 current_time=0.0 - 0.05im time=2.366
+After sweep 2: maxlinkdim=37 maxerr=9.16E-11 current_time=0.0 - 0.1im time=2.733
+TDVP Time spent: 5.1309380531311035
+Sum i Time spent: 0.021952152252197266
+T step: 17, Chi(1.7000000000000002) finished.
+Loop Time spent: 5.153018951416016
+After sweep 1: maxlinkdim=38 maxerr=9.92E-11 current_time=0.0 - 0.05im time=2.893
+After sweep 2: maxlinkdim=39 maxerr=9.43E-11 current_time=0.0 - 0.1im time=3.001
+TDVP Time spent: 5.992604970932007
+Sum i Time spent: 0.02099299430847168
+T step: 18, Chi(1.8) finished.
+Loop Time spent: 6.0137529373168945
+After sweep 1: maxlinkdim=40 maxerr=8.59E-11 current_time=0.0 - 0.05im time=3.469
+After sweep 2: maxlinkdim=40 maxerr=1.32E-10 current_time=0.0 - 0.1im time=3.326
+TDVP Time spent: 6.863157033920288
+Sum i Time spent: 0.03177809715270996
+T step: 19, Chi(1.9000000000000001) finished.
+Loop Time spent: 6.895108938217163
+After sweep 1: maxlinkdim=40 maxerr=1.98E-10 current_time=0.0 - 0.05im time=3.477
+After sweep 2: maxlinkdim=40 maxerr=2.96E-10 current_time=0.0 - 0.1im time=3.375
+TDVP Time spent: 6.865418910980225
+Sum i Time spent: 0.03626585006713867
+T step: 20, Chi(2.0) finished.
+Loop Time spent: 6.90189790725708
