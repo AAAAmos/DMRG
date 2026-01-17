@@ -46,9 +46,9 @@ function H_heisenberg_aucillary(N)
     # os .+= g, "Sz", N-1
 
     # PBC
-    os .+= J1, "Sz", N-1, "Sz", 1
-    os .+= J1/2, "S+", N-1, "S-", 1
-    os .+= J1/2, "S-", N-1, "S+", 1
+    # os .+= J1, "Sz", N-1, "Sz", 1
+    # os .+= J1/2, "S+", N-1, "S-", 1
+    # os .+= J1/2, "S-", N-1, "S+", 1
 
     return os
 end
@@ -160,20 +160,22 @@ end
 
 
 let
-    N_physics = 7
+    N_physics = 9
     N = 2 * N_physics
     
     linkdim = 20
-    maxdim = [200, 200, 200, 200, 200]
-    cutoff = 1E-12
+    dmrg_maxdim = [200, 200, 200, 200, 200]
+    psi_cutoff = 1E-10
+    time_cutoff = 1E-10
+    println("State cutoff: ", psi_cutoff)
     dtau = 0.1
     tausweep = 2
     Tsteps = 100
 
     theta = 0.102*pi # AKLT phase
 
-    beta_list = [0, 0.01]
-    # beta_list = [0, 5/10, 1, 2, 3, 4, 5]
+    beta_list = [0, 0.1]
+    # beta_list = [0, 1/100, 5/10, 1, 2, 3, 4, 5]
     d_beta = 0.001
     # nsweeps = round(Int, beta/d_beta)
     
@@ -182,42 +184,52 @@ let
     
 #    --- T=0 ---
 
-    # # -- physical states --
-    # sites = siteinds("S=1/2", N_physics; conserve_sz = true)
-    # states = [isodd(n) ? "Up" : "Dn" for n in 1:N_physics]
-    # # states = ["Dn" for n in 1:N_physics]
-    # # states = ["Up" for n in 1:N_physics]
-    # psi = MPS(Float64, sites, states)
+    # -- physical states --
+    sites = siteinds("S=1/2", N_physics; conserve_sz = true)
+    states = [isodd(n) ? "Up" : "Dn" for n in 1:N_physics] # AFM
+    # states = ["Dn" for n in 1:N_physics]
+    # states = ["Up" for n in 1:N_physics]
+    psi = MPS(Float64, sites, states)
 
-    # sites = siteinds("S=1/2", N; conserve_sz = false)
-    # psi_ran = random_mps(sites; linkdims=linkdim)
+    # # sites = siteinds("S=1/2", N; conserve_sz = false)
+    # # psi_ran = random_mps(sites; linkdims=linkdim)
 
-    # H = MPO(H_heisenberg(N_physics), sites)
+    H = MPO(H_heisenberg(N_physics), sites)
 
-    # # -- dmrg --
-    # E0, psi0 = dmrg(H, psi_ran; nsweeps=10, maxdim, cutoff, outputlevel=1)
+#    -- dmrg --
+    E0, psi0 = dmrg(H, psi; 
+        nsweeps=10, maxdim=dmrg_maxdim, cutoff=psi_cutoff, outputlevel=1
+    )
     # # println("Sz(5)=", expect(psi0, "Sz")[5])
-    # println("E0 at T=0: ", E0)
+    # println("Ground state energy: ", E0)
+    # E_file = "./Heisenberg_data/E_cut-10.csv"
+    # open(E_file, "w") do io 
+    #     d = @sprintf("%.i,%.10f\n", 100000, E0)
+    #     write(io, "beta,E\n")
+    #     write(io, d)
+    # end
 
-    # # -- correlation function --
-    # Si = 9
-    # chi = chi_x_t_FT(Si, Si, H, psi0, sites, Tsteps, dtau;
-    #     nsites=2, cutoff=cutoff, maxdim=1000, ns=tausweep
-    # )
+#    -- correlation function --
+#    -- real space --
+    Si = 1
+    Sj = 9
+
+    filename = @sprintf(
+        "./Heisenberg_data/Chi_obc_N%i_S%iS%i_Tau%i_dt%.2f_GS_zz.csv", 
+        # "./test.csv", 
+        N_physics, Si, Sj, Tsteps*dtau, dtau/tausweep
+    )
+
+    chi = chi_x_t(Si, Sj, H, psi0, sites, Tsteps, dtau, filename;
+        nsites=2, cutoff=time_cutoff, maxdim=1000, ns=tausweep
+    )
 
     # # Tgatep = TrotterGates_Hei(sites, dtau)
     # # Tgaten = TrotterGates_Hei(sites, -dtau)
     # # chi = chi_x_t(Si, Si, psi0, E0, sites, [Tgatep, Tgaten]; dt=dtau, Tsteps=Tsteps, cutoff=1E-10)
 
-    # filename = @sprintf(
-    #     "./Heisenberg_data/Chi_N%i_S%iS%i_Tau%i_dt%.2f_betaInf_zz_auc_phy.csv", 
-    #     # "./test.csv", 
-    #     N_physics, Si, Si, Tsteps*dtau, dtau/tausweep
-    # )
     # open(filename, "w") do io 
-
     #     write(io, "t,RS,IS\n")
-
     #     for t in -Tsteps:Tsteps
     #         i = t + Tsteps+1
     #         d = @sprintf("%.2f,%.10f,%.10f\n", t*dtau, chi[i].re, chi[i].im)
@@ -239,54 +251,65 @@ let
 
         psi_beta = tdvp(
             H, -b/2, psi_beta; 
-            nsweeps=nsweeps, maxdim=1000, normalize=true, nsite=2, cutoff=cutoff
+            nsweeps=nsweeps, maxdim=1000, normalize=true, nsite=2, cutoff=psi_cutoff
             , outputlevel=1
         )
         println("Cooldown fin.")
         println("Beta = ", beta_list[i+1])
     end
 
-#    - Mz, Trace -
-    #     # Mz = expect(psi_beta, "Sz"; sites=1)
-    #     println("Purity: ", purity(psi_beta, sites))
-        
+#    - Mz, Trace, E -
+        # Mz = expect(psi_beta, "Sz"; sites=1)
+
+        # site number < 14 is needed !!!
+        # println("Purity: ", purity(psi_beta, sites))
+
+        # psi_h = apply(H, psi_beta; cutoff=psi_cutoff)
+        # E_beta = inner(psi_beta, psi_h)
+        # println("Energy: ", E_beta)
+    #     open(E_file, "a") do io 
+    #         d = @sprintf("%.4f,%.10f\n", beta_list[i+1], E_beta)
+    #         write(io, d)
+    #     end
     # end
 
 #    -- Real space, time --
-    BLAS.set_num_threads(1)
+    # BLAS.set_num_threads(1)
+
     Si = 1
-    chi = chi_x_t_FT(Si, Si, H, psi_beta, sites, Tsteps, dtau;
-        nsites=2, cutoff=cutoff, maxdim=1000, ns=tausweep
-    )
+    Sj = 17
 
     filename = @sprintf(
         "./Heisenberg_data/Chi_N%i_pbc_S%iS%i_Tau%i_dt%.2f_beta%.2f_zz.csv", 
-        N_physics, Si-4, Si-4, Tsteps*dtau, dtau/tausweep, beta_list[2]
+        N_physics, Si, Sj-8, Tsteps*dtau, dtau/tausweep, beta_list[2]
     )
-    open(filename, "w") do io 
 
-        write(io, "t,RS,IS\n")
+    chi = chi_x_t_FT(Si, Sj, H, psi_beta, sites, Tsteps, dtau, filename;
+        nsites=2, cutoff=time_cutoff, maxdim=1000, ns=tausweep
+    )
 
-        for t in -Tsteps:Tsteps
-            i = t + Tsteps+1
-            d = @sprintf("%.2f,%.10f,%.10f\n", t*dtau, chi[i].re, chi[i].im)
-            write(io, d)
-        end
-    end
+    # open(filename, "w") do io 
+    #     write(io, "t,RS,IS\n")
+    #     for t in -Tsteps:Tsteps
+    #         i = t + Tsteps+1
+    #         d = @sprintf("%.2f,%.10f,%.10f\n", t*dtau, chi[i].re, chi[i].im)
+    #         write(io, d)
+    #     end
+    # end
 
 #    -- Momentum space, real time --
     # BLAS.set_num_threads(1)
-    # chi = chi_t_FT(k, H, psi_beta, sites, Tsteps, dtau; 
-    #     nsites=2, cutoff=cutoff, maxdim=1000, ns=tausweep
-    # )
+    
     # filename = @sprintf(
     #     "./Heisenberg_data/Chi_N%i_k%.2f_Tau%.i_dt%.2f_beta%.2f_zz_err-6.csv", 
     #     N_physics, k/pi, Tsteps*dtau, dtau/tausweep, beta
     # )
+
+    # chi = chi_t_FT(k, H, psi_beta, sites, Tsteps, dtau, filename; 
+    #     nsites=2, cutoff=psi_cutoff, maxdim=1000, ns=tausweep
+    # )
     # open(filename, "w") do io 
-
     #     write(io, "t,RS,IS\n")
-
     #     for t in -Tsteps:Tsteps
     #         i = t + Tsteps+1
     #         d = @sprintf("%.2f,%.10f,%.10f\n", t*dtau, chi[i].re, chi[i].im)

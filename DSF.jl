@@ -204,70 +204,14 @@ function chi_x_t(Si, Sj, psi0, E0, sites, Tgates; dt=0.1, Tsteps=10, cutoff=1E-1
     return chi
 end
 
-function chi_t(k, H, psi0, sites, Tsteps, dt; nsites=1, cutoff=1e-10, maxdim=20)
-
-    # # observer method (optimization)
-    # mutable struct DSFObserver <: AbstractObserver # store observable
-    #     times::Vector{Float64}
-    #     chi::Vector{ComplexF64}
-    # end
-
-    # function ITensors.measure!(obs::DSFObserver; psi, t, kwargs...)
-    #     push!(obs.times, imag(t)) # imag(t) if doing real-time with -im*dt
-        
-    #     corr = inner(psi_0, psi) 
-    #     push!(obs.correlations, corr)
-    # end
-
-    # manual loop (for verification)
+function chi_t(k, H, psi0, sites, Tsteps, dt, filename; nsites=1, cutoff=1e-10, maxdim=20, ns=1)
 
     chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
-    chi_n = zeros(ComplexF64, Tsteps) # store the chi(t)
 
     N = length(psi0)
     center = div(N, 2) + 1
     psi_prime = copy(psi0)
     psi_prime[center] = noprime(op("Sz", sites[center]) * psi0[center])
-
-    # prepare for time evolution
-    psi_t_p = copy(psi_prime)
-    psi_t_n = copy(psi_prime)
-
-    cal_t = time()
-
-    for t in 1:Tsteps
-        psi_t_p = tdvp(
-            H, -im*dt, psi_t_p; 
-            nsweeps=1, maxdim=maxdim, normalize=true, nsite=nsites
-        )
-        psi_t_n = tdvp(
-            H, im*dt, psi_t_n; 
-            nsweeps=1, maxdim=maxdim, normalize=true, nsite=nsites
-        )
-
-        chi_t_p = complex(0.0, 0.0)
-        chi_t_n = complex(0.0, 0.0)
-        # sum over sites
-        for j = 1:N
-            # println(j)
-            psi_Sj_p = copy(psi_t_p)
-            psi_Sj_n = copy(psi_t_n)
-            psi_Sj_p[j] = noprime(op("Sz", sites[j]) * psi_Sj_p[j])
-            psi_Sj_n[j] = noprime(op("Sz", sites[j]) * psi_Sj_n[j])
-            # momentum phase
-            phaseK = exp(-im * k * (j-center))
-            chi_t_p += phaseK * inner(psi0, psi_Sj_p)
-            chi_t_n += phaseK * inner(psi0, psi_Sj_n)
-        end
-        
-        chi_p[t] = chi_t_p 
-        chi_n[t] = chi_t_n
-        if (t % 100) == 0.0 
-            println("T step: $(t), Chi($(t*dt)) finished.")
-            println("Time spent: $(time()-cal_t)")
-            cal_t = time()
-        end
-    end
 
     # t = 0
     chi_t0 = complex(0.0, 0.0)
@@ -278,7 +222,108 @@ function chi_t(k, H, psi0, sites, Tsteps, dt; nsites=1, cutoff=1e-10, maxdim=20)
         chi_t0 += phaseK * inner(psi0, psi_Sj_0)
     end
 
-    chi_n = reverse(chi_n)
+    # prepare for time evolution
+    psi_Sc_t = copy(psi_prime)
+    psi_prime = nothing
+
+    # write data
+    open(filename, "w") do io 
+        write(io, "t,RS,IS\n")
+        d = @sprintf("%.2f,%.10f,%.10f\n", 0, chi_t0.re, chi_t0.im)
+        write(io, d)
+    end
+
+    for t in 1:Tsteps
+
+        cal_t = time()
+    
+        psi_Sc_t = tdvp(
+            H, -im*dt, psi_Sc_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites
+        )
+
+        chi_t_p = complex(0.0, 0.0)
+        # sum over sites
+        for j = 1:N
+            # println(j)
+            psi_Sc_t_Si = copy(psi_Sc_t)
+            psi_Sc_t_Si[j] = noprime(op("Sz", sites[j]) * psi_Sc_t_Si[j])
+            # momentum phase
+            phaseK = exp(-im * k * (j-center))
+            chi_t_p += phaseK * inner(psi0, psi_Sc_t_Si)
+        end
+        chi_p[t] = chi_t_p 
+
+        if (t % 100) == 0.0 
+            println("T step: $(t), Chi($(t*dt)) finished.")
+            println("Time spent: $(time()-cal_t)")
+            cal_t = time()
+        end
+
+        # write data incase unexpected termination happend
+        open(filename, "a") do io 
+            d = @sprintf("%.2f,%.10f,%.10f\n", t*dt, chi_t_p.re, chi_t_p.im)
+            write(io, d)
+        end
+    end
+
+    chi_n = reverse(conj(chi_p))
+    chi = append!(chi_n, chi_t0, chi_p) # time grid from -T to +T
+
+    return chi
+end
+
+function chi_x_t(Si, Sj, H, psi0, sites, Tsteps, dt, filename; nsites=1, cutoff=1e-10, maxdim=20, ns=1)
+
+    chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
+
+    N = length(psi0)
+    psi_prime = copy(psi0)
+    psi_prime[Sj] = noprime(op("Sz", sites[Sj]) * psi0[Sj])
+
+    # prepare for time evolution
+    psi_Sj_t = copy(psi_prime)
+
+    # t=0
+    psi_prime[Sj] = noprime(op("Sz", sites[Sj]) * psi_prime[Sj])
+    chi_t0 = complex(0.0, 0.0)
+    chi_t0 += inner(psi0, psi_prime)
+    
+    psi_prime = nothing
+    
+    # write data
+    open(filename, "w") do io 
+        write(io, "t,RS,IS\n")
+        d = @sprintf("%.2f,%.10f,%.10f\n", 0, chi_t0.re, chi_t0.im)
+        write(io, d)
+    end
+
+    for t in 1:Tsteps
+
+        cal_t = time()
+
+        psi_Sj_t = tdvp(
+            H, -im*dt, psi_Sj_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites
+        )
+
+        psi_Sj_t_Si = copy(psi_Sj_t)
+        psi_Sj_t_Si[Si] = noprime(op("Sz", sites[Si]) * psi_Sj_t_Si[Si])
+        chi_p[t] += inner(psi0, psi_Sj_t_Si)
+
+        if (t % 100) == 0.0 
+            println("T step: $(t), Chi($(t*dt)) finished.")
+            println("Time spent: $(time()-cal_t)")
+        end
+        
+        # write data incase unexpected termination happend
+        open(filename, "a") do io 
+            d = @sprintf("%.2f,%.10f,%.10f\n", t*dt, chi_p[t].re, chi_p[t].im)
+            write(io, d)
+        end
+    end
+
+    chi_n = reverse(conj(chi_p)) # for operator SS = 1
     chi = append!(chi_n, chi_t0, chi_p) # time grid from -T to +T
 
     return chi
@@ -374,7 +419,7 @@ function chi_t_test(k, H, psi0, sites, Tsteps, dt; nsites=1, cutoff=1e-10, maxdi
     return chi
 end
 
-function chi_t_FT(k, H, psi0, sites, Tsteps, dt; nsites=1, cutoff=1e-10, maxdim=20, ns=1)
+function chi_t_FT(k, H, psi0, sites, Tsteps, dt, filename; nsites=1, cutoff=1e-10, maxdim=20, ns=1)
     
     chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
 
@@ -398,6 +443,13 @@ function chi_t_FT(k, H, psi0, sites, Tsteps, dt; nsites=1, cutoff=1e-10, maxdim=
 
     psi_prime = nothing
 
+    # write data
+    open(filename, "w") do io 
+        write(io, "t,RS,IS\n")
+        d = @sprintf("%.2f,%.10f,%.10f\n", 0, chi_t0.re, chi_t0.im)
+        write(io, d)
+    end
+
     for t in 1:Tsteps
         ol=1
 
@@ -417,7 +469,7 @@ function chi_t_FT(k, H, psi0, sites, Tsteps, dt; nsites=1, cutoff=1e-10, maxdim=
 
         println("TDVP Time spent: $(time()-t_start)")
 
-        t_sumi = time()
+        # t_sumi = time()
 
         chi_t = complex(0.0, 0.0)
         # sum over sites
@@ -429,12 +481,18 @@ function chi_t_FT(k, H, psi0, sites, Tsteps, dt; nsites=1, cutoff=1e-10, maxdim=
             phaseK = exp(-im * k * (j-n)/2)
             chi_t += phaseK * inner(psi_t, psi_Sc_t_Sj) 
         end
-        println("Sum i Time spent: $(time()-t_sumi)")
+        # println("Sum i Time spent: $(time()-t_sumi)")
         
         chi_p[t] = chi_t 
 
         println("T step: $(t), Chi($(t*dt)) finished.")
         println("Loop Time spent: $(time()-t_start)")
+
+        # write data incase unexpected termination happend
+        open(filename, "a") do io 
+            d = @sprintf("%.2f,%.10f,%.10f\n", t*dt, chi_t.re, chi_t.im)
+            write(io, d)
+        end
     end
 
     chi_n = reverse(conj(chi_p))
@@ -443,7 +501,7 @@ function chi_t_FT(k, H, psi0, sites, Tsteps, dt; nsites=1, cutoff=1e-10, maxdim=
     return chi
 end
 
-function chi_x_t_FT(Si, Sj, H, psi0, sites, Tsteps, dt; nsites=1, cutoff=1e-10, maxdim=20, ns=1)
+function chi_x_t_FT(Si, Sj, H, psi0, sites, Tsteps, dt, filename; nsites=1, cutoff=1e-10, maxdim=20, ns=1)
     
     chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
 
@@ -457,9 +515,17 @@ function chi_x_t_FT(Si, Sj, H, psi0, sites, Tsteps, dt; nsites=1, cutoff=1e-10, 
 
     # t = 0
     psi_prime[Si] = noprime(op("Sz", sites[Si]) * psi_prime[Si])
-    chi_t0 = inner(psi0, psi_prime)
+    chi_t0 = complex(0.0, 0.0)
+    chi_t0 += inner(psi0, psi_prime)
 
     psi_prime = nothing
+
+    # write data
+    open(filename, "w") do io 
+        write(io, "t,RS,IS\n")
+        d = @sprintf("%.2f,%.10f,%.10f\n", 0, chi_t0.re, chi_t0.im)
+        write(io, d)
+    end
 
     for t in 1:Tsteps
 
@@ -488,6 +554,12 @@ function chi_x_t_FT(Si, Sj, H, psi0, sites, Tsteps, dt; nsites=1, cutoff=1e-10, 
 
         println("T step: $(t), Chi($(t*dt)) finished.")
         println("Loop Time spent: $(time()-t_start)")
+
+        # write data incase unexpected termination happend
+        open(filename, "a") do io 
+            d = @sprintf("%.2f,%.10f,%.10f\n", t*dt, chi_p[t].re, chi_p[t].im)
+            write(io, d)
+        end
     end
 
     chi_n = reverse(conj(chi_p))
