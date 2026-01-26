@@ -1,40 +1,12 @@
 using ITensors
 using ITensorMPS
-using JLD2
-using Printf
+using Printf: @sprintf
 using Statistics: mean
-# using LinearAlgebra
-# BLAS.set_num_threads(1)
+using LinearAlgebra: BLAS
+include("DSF.jl")
 
 function res(x, M) # same as % in python
     return mod(x-1, M)+1
-end
-
-function trivial_state(N)
-
-    # sites = siteinds("S=1/2", N; conserve_sz = true, qnname_sz="TotalSz")
-    sites = siteinds("S=1/2", N)
-
-    # Initialize MPS in a simple product state |Up, Up, Up... >
-    psi = MPS(sites, "Up")
-
-    gates = ITensor[]
-    for j in 1:2:N-1
-        s1 = siteind(psi, j)
-        s2 = siteind(psi, j+1)
-        
-        g = ITensor(s1, s2, s1', s2')
-        g[s1=>1, s2=>1, s1'=>1, s2'=>1] = 1.0 / sqrt(2)
-        g[s1=>1, s2=>1, s1'=>2, s2'=>2] = 1.0 / sqrt(2)
-
-        push!(gates, g)
-    end
-
-    psi = apply(gates, psi; cutoff=1e-10)
-    psi = noprime(psi)
-    println("EPR state fin.")
-
-    return psi, sites
 end
 
 function H_phy(n, m, J, j, D, h)
@@ -200,24 +172,37 @@ end
 # H_aucillary(3, 3, 1, 0.1, 0.1, 0.1)
 
 let 
+    total_time = time()
+
     N = 2
     M = 2
     Jnn, Jnnn, DMI, h = 1, 0.1, 0.1, 0.1
+    QN_conservation = false
     
     dmrg_linkdim = 10
     dmrg_maxdim = [200, 200, 200, 200, 200]
     maxdim = 1000
 
-    psi_cutoff = 1E-6
+    psi_cutoff = 1E-10
     time_cutoff = 1E-10
     println("State cutoff: ", psi_cutoff)
 
-    dtau = 0.2
-    tausweep = 5
-    Tsteps = 10
+    dtau = 0.05
+    tausweep = 1
+    Tsteps = 20
 
-    beta_list = [0, 1/100, 1/10, 5/10, 1, 2, 3, 4, 5, 6]
-    d_beta = 0.001
+    beta = 2
+    beta_list = [0, 2]
+    # beta_list = [0, 1, 1.3, 2, 3, 4, 5, 6]
+    d_beta = 0.01
+
+    E_file = @sprintf(
+        "./HC_data/%.i%.i_DM%.2f_psi%.i_tau%.i_db%.2f_QNf.csv",
+        N, M, DMI, Int(log10(psi_cutoff)), Int(log10(time_cutoff))
+    )
+    
+    k = pi
+    Omega = range(0.0, 5.0, length = 500)
     
 #    --- T=0 ---
 
@@ -235,34 +220,32 @@ let
     mean_sz = mean(expect(psi0, "Sz"))
     # println("Sz(5)=", expect(psi0, "Sz")[5])
     println("Ground state energy: ", E0)
-    E_file = "./HC_data/22_E_cut-6.csv"
-    open(E_file, "w") do io 
-        write(io, "beta,E,Sz\n")
-        d = @sprintf("%.i,%.10f,%.5f\n", 100000, E0, mean_sz)
-        write(io, d)
-    end
 
-#    -- correlation function --
-    # Si = 9
-    # chi = chi_x_t_FT(Si, Si, H, psi0, sites, Tsteps, dtau;
-    #     nsites=2, cutoff=time_cutoff, maxdim=1000, ns=tausweep
-    # )
-
-    # filename = @sprintf(
-    #     "./Heisenberg_data/Chi_N%i_S%iS%i_Tau%i_dt%.2f_betaInf_zz_auc_phy.csv", 
-    #     # "./test.csv", 
-    #     N_physics, Si, Si, Tsteps*dtau, dtau/tausweep
-    # )
-    # open(filename, "w") do io 
-
-    #     write(io, "t,RS,IS\n")
-
-    #     for t in -Tsteps:Tsteps
-    #         i = t + Tsteps+1
-    #         d = @sprintf("%.2f,%.10f,%.10f\n", t*dtau, chi[i].re, chi[i].im)
-    #         write(io, d)
-    #     end
+    # open(E_file, "w") do io 
+    #     write(io, "beta,E,Sz\n")
+    #     d = @sprintf("%.i,%.10f,%.5f\n", 100000, E0, mean_sz)
+    #     write(io, d)
     # end
+
+#    -- Momentum space, real time --
+    BLAS.set_num_threads(1)
+    
+    filename = @sprintf(
+        "./HC_data/Chi_%.i%.i_DM%.2f_psi%.i_tau%.i_db%.2f_QNf_k%.2f_Tau%.i_dt%.2f_beta%.2f_zz.csv",
+        N, M, DMI, Int(log10(psi_cutoff)), Int(log10(time_cutoff)), 
+    )
+
+    chi = chi_t_FT(k, H, psi_beta, sites, Tsteps, dtau, filename; 
+        nsites=2, cutoff=psi_cutoff, maxdim=1000, ns=tausweep
+    )
+    open(filename, "w") do io 
+        write(io, "t,RS,IS\n")
+        for t in -Tsteps:Tsteps
+            i = t + Tsteps+1
+            d = @sprintf("%.2f,%.10f,%.10f\n", t*dtau, chi[i].re, chi[i].im)
+            write(io, d)
+        end
+    end
 
 #    --- finite T ---
     
@@ -299,4 +282,6 @@ let
             write(io, d)
         end
     end
+
+    println("Total computational time: $(time()-Total_time)")
 end

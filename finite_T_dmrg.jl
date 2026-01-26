@@ -1,7 +1,8 @@
 using ITensors
 using ITensorMPS
 using Printf: @sprintf
-using LinearAlgebra: BLAS, eigvals, svd
+using LinearAlgebra: BLAS
+using Statistics: mean
 # using JLD2
 
 include("DSF.jl")
@@ -93,91 +94,28 @@ function H_BLBQ_aucillary(N, theta)
     return os
 end
 
-function trivial_state(N)
-
-    # sites = siteinds("S=1/2", N; conserve_sz = true, qnname_sz="TotalSz")
-    sites = siteinds("S=1/2", N)
-
-    # Initialize MPS in a simple product state |Up, Up, Up... >
-    # states = [isodd(n) ? "Up" : "Dn" for n in 1:N]
-    # psi = MPS(Float64, sites, states)
-    psi = MPS(Float64, sites, "Up")
-
-    # construct trivial state at beta=0
-    # map |Up, Up> to 1/√2(|Up, Up> + |Down, Down>)
-    gates = ITensor[]
-    for j in 1:2:N-1
-        s1 = siteind(psi, j)
-        s2 = siteind(psi, j+1)
-        
-        # Create an operator tensor with 4 indices: (s1, s2) and (s1', s2')
-        g = ITensor(s1, s2, s1', s2')
-        # transition: |Up,Up> -> 1/√2(|Up,Up> + |Down,Down>)
-        # Index 1 = Up, Index 2 = Down
-        g[s1=>1, s2=>1, s1'=>1, s2'=>1] = 1.0 / sqrt(2)
-        g[s1=>1, s2=>1, s1'=>2, s2'=>2] = 1.0 / sqrt(2)
-
-        push!(gates, g)
-    end
-    # @show gates
-
-    psi = apply(gates, psi; cutoff=1e-10)
-    psi = noprime(psi)
-
-    # Verification: Measure <Sz> on a physical site. Expect 0
-    # sz_1 = expect(psi, "Sz"; sites=2)
-    # println("Verification - <Sz> at site 1: ", round(sz_1, digits=5))
-    # println("Norm of |psi_0>: ", norm(psi))
-    println("EPR state fin.")
-
-    return psi, sites
-end
-
-function purity(psi, sites)
-    #= Return the purity of the physical states TrA(rho^2)
-    psi: aucillary state
-    sites:the sites of the states
-    =#
-
-    N = length(psi)
-    p_inds = [sites[i] for i in 1:2:N]
-    a_inds = [sites[i] for i in 2:2:N]
-
-    T = ITensor(1.0)
-    for i in 1:N
-        T *= psi[i]
-    end
-    U, S, V = svd(T, p_inds)
-
-    purity = 0
-    for i in 1:dim(S, 1)
-        rho = S[i, i]^2
-        purity += rho^2
-    end
-
-    return purity
-end
-
-
 let
     N_physics = 9
     N = 2 * N_physics
+    QN_conservation = false
     
     linkdim = 20
     dmrg_maxdim = [200, 200, 200, 200, 200]
-    psi_cutoff = 1E-10
+    psi_cutoff = 1E-8
     time_cutoff = 1E-10
     println("State cutoff: ", psi_cutoff)
-    dtau = 0.1
-    tausweep = 2
-    Tsteps = 100
+    dtau = 0.08
+    tausweep = 1
+    Tsteps = 15*5
 
     theta = 0.102*pi # AKLT phase
 
-    beta_list = [0, 0.1]
-    # beta_list = [0, 1/100, 5/10, 1, 2, 3, 4, 5]
-    d_beta = 0.001
-    # nsweeps = round(Int, beta/d_beta)
+    beta = 1
+    beta_list = [0, 1]
+    # beta_list = [0, 1/100, 2/100, 1/10, 2/10, 5/10, 1, 2, 3, 4, 5, 7]
+    # beta_list = [0, 1, 2, 3, 4, 5, 7]
+    d_beta = 0.01
+    # E_file = "./Heisenberg_data/v1/N9_E_cut2.5-9_dbeta0.001.csv"
     
     k = pi
     Omega = range(0.0, 5.0, length = 500)
@@ -185,44 +123,45 @@ let
 #    --- T=0 ---
 
     # -- physical states --
-    sites = siteinds("S=1/2", N_physics; conserve_sz = true)
-    states = [isodd(n) ? "Up" : "Dn" for n in 1:N_physics] # AFM
-    # states = ["Dn" for n in 1:N_physics]
-    # states = ["Up" for n in 1:N_physics]
-    psi = MPS(Float64, sites, states)
+    # sites = siteinds("S=1/2", N_physics; conserve_sz = true)
+    # states = [isodd(n) ? "Up" : "Dn" for n in 1:N_physics] # AFM
+    # # states = ["Dn" for n in 1:N_physics]
+    # # states = ["Up" for n in 1:N_physics]
+    # psi = MPS(Float64, sites, states)
 
     # # sites = siteinds("S=1/2", N; conserve_sz = false)
     # # psi_ran = random_mps(sites; linkdims=linkdim)
 
-    H = MPO(H_heisenberg(N_physics), sites)
+    # H = MPO(H_heisenberg(N_physics), sites)
 
 #    -- dmrg --
-    E0, psi0 = dmrg(H, psi; 
-        nsweeps=10, maxdim=dmrg_maxdim, cutoff=psi_cutoff, outputlevel=1
-    )
+    # E0, psi0 = dmrg(H, psi; 
+    #     nsweeps=5, maxdim=dmrg_maxdim, cutoff=psi_cutoff, outputlevel=1
+    # )
+    # mean_sz = mean(expect(psi0, "Sz"))
     # # println("Sz(5)=", expect(psi0, "Sz")[5])
     # println("Ground state energy: ", E0)
-    # E_file = "./Heisenberg_data/E_cut-10.csv"
+
     # open(E_file, "w") do io 
-    #     d = @sprintf("%.i,%.10f\n", 100000, E0)
-    #     write(io, "beta,E\n")
+    #     write(io, "beta,E,Sz,dim\n")
+    #     d = @sprintf("%.i,%.10f,%.5f,%.i\n", 100000, E0, mean_sz, maxlinkdim(psi0))
     #     write(io, d)
     # end
 
 #    -- correlation function --
 #    -- real space --
-    Si = 1
-    Sj = 9
+    # Si = 1
+    # Sj = Si
 
-    filename = @sprintf(
-        "./Heisenberg_data/Chi_obc_N%i_S%iS%i_Tau%i_dt%.2f_GS_zz.csv", 
-        # "./test.csv", 
-        N_physics, Si, Sj, Tsteps*dtau, dtau/tausweep
-    )
+    # filename = @sprintf(
+    #     "./Heisenberg_data/v2/Chi_obc_N%i_S%iS%i_Tau%i_dt%.2f_GS_zz.csv", 
+    #     # "./test.csv", 
+    #     N_physics, Si, Sj, Tsteps*dtau, dtau/tausweep
+    # )
 
-    chi = chi_x_t(Si, Sj, H, psi0, sites, Tsteps, dtau, filename;
-        nsites=2, cutoff=time_cutoff, maxdim=1000, ns=tausweep
-    )
+    # chi = chi_x_t(Si, Sj, H, psi0, sites, Tsteps, dtau, filename;
+    #     cutoff=time_cutoff, maxdim=50, ns=tausweep
+    # )
 
     # # Tgatep = TrotterGates_Hei(sites, dtau)
     # # Tgaten = TrotterGates_Hei(sites, -dtau)
@@ -238,9 +177,8 @@ let
     # end
 
 #    --- finite T ---
-    psi_beta, sites = trivial_state(N) # |psi(beta=0)>
+    psi_beta, sites = trivial_state(N; QN=QN_conservation) # |psi(beta=0)>
     H = MPO(H_heisenberg_aucillary(N), sites)
-    # H = MPO(H_BLBQ_aucillary(N, theta), sites)
     
     # println("Purity: ", purity(psi_beta, sites))
 
@@ -248,6 +186,8 @@ let
 
         b = beta_list[i+1]-beta_list[i]
         nsweeps = round(Int, b/d_beta)
+        println("delta beta:", d_beta)
+        # println("number of loops:", nsweeps)
 
         psi_beta = tdvp(
             H, -b/2, psi_beta; 
@@ -255,37 +195,40 @@ let
             , outputlevel=1
         )
         println("Cooldown fin.")
-        println("Beta = ", beta_list[i+1])
+        beta = beta_list[i+1]
+        println("Beta = ", beta)
     end
 
 #    - Mz, Trace, E -
-        # Mz = expect(psi_beta, "Sz"; sites=1)
+    #     Mz = mean(expect(psi_beta, "Sz"))
+    #     dim = maxlinkdim(psi_beta)
 
-        # site number < 14 is needed !!!
-        # println("Purity: ", purity(psi_beta, sites))
+    #     # site number < 14 is needed !!!
+    #     # println("Purity: ", purity(psi_beta, sites))
 
-        # psi_h = apply(H, psi_beta; cutoff=psi_cutoff)
-        # E_beta = inner(psi_beta, psi_h)
-        # println("Energy: ", E_beta)
+    #     psi_h = apply(H, psi_beta; cutoff=psi_cutoff)
+    #     E_beta = inner(psi_beta, psi_h)
+    #     # println("Energy: ", E_beta)
+    #     # println("M: ", Mz)
     #     open(E_file, "a") do io 
-    #         d = @sprintf("%.4f,%.10f\n", beta_list[i+1], E_beta)
+    #         d = @sprintf("%.4f,%.10f,%.5f,%.i\n", beta, E_beta, Mz, dim)
     #         write(io, d)
     #     end
     # end
 
 #    -- Real space, time --
-    # BLAS.set_num_threads(1)
+    BLAS.set_num_threads(1)
 
-    Si = 1
-    Sj = 17
+    Si = 9
+    Sj = Si
 
     filename = @sprintf(
-        "./Heisenberg_data/Chi_N%i_pbc_S%iS%i_Tau%i_dt%.2f_beta%.2f_zz.csv", 
-        N_physics, Si, Sj-8, Tsteps*dtau, dtau/tausweep, beta_list[2]
+        "./Heisenberg_data/v2/Chi_N%i_S%iS%i_Tau%i_dt%.2f_beta%.2f_zz_test_ex1+1_dim.csv", 
+        N_physics, Si-4, Sj-4, Tsteps*dtau, dtau/tausweep, beta
     )
 
     chi = chi_x_t_FT(Si, Sj, H, psi_beta, sites, Tsteps, dtau, filename;
-        nsites=2, cutoff=time_cutoff, maxdim=1000, ns=tausweep
+        cutoff=time_cutoff, maxdim=50, ns=tausweep
     )
 
     # open(filename, "w") do io 

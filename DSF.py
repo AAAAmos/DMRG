@@ -50,6 +50,25 @@ def build_basis(n, s):
     
     return basis, r
 
+def build_HC_basis(m, n):
+
+  ### compute basis
+  m_2 = m*2
+  N = m_2*n
+  print("constructed hexagonal lattice with {0:d} sites.\n".format(N))
+
+  basis = spin_basis_general(N, S = "1/2", pauli = 0)
+  print("Hilbert space size: {0:d}.\n".format(basis.Ns))
+  
+  r = []
+  
+  for i in range(n):
+    for j in range(m):
+      r.append([(3*i + 2)/2, 3**0.5*(-i/2 + j) ])
+      r.append([(3*i + 1)/2, 3**0.5*(-i/2 + j + 0.5)])
+  
+  return basis, r
+
 def H_BLBQ(N, theta, basis, obc=False):
 
     #### set up Heisenberg Hamiltonian with quspin #####
@@ -132,6 +151,79 @@ def H_heisenburg(N, g, basis, obc=False):
     H = hamiltonian(static, dynamic, basis=basis, dtype=np.float64)
     return H
 
+
+def H_HC(m, n, Jxy, Jz, J_nnn, J_dmi, h, basis):
+
+  #### set up Heisenberg Hamiltonian with quspin #####
+
+  m_2 = m*2
+  N = m_2*n
+  
+  # set up spin-spin interaction lists
+  
+  Sz = []
+  SzSz = []
+  SpSn = []
+  SnSp = []
+  
+  for i in range(n):
+    for j in range(m):
+    
+      #Zeamann term
+      
+      Sz.append([-h, m_2*i + 2*j])
+      Sz.append([-h, m_2*i + 2*j+1])
+      
+      #N.N. coupling
+      
+      SzSz.append([-Jz, m_2*i + 2*j, m_2*i + (2*j+1)])
+      SpSn.append([-Jxy/2, m_2*i + 2*j, m_2*i + (2*j+1)])
+      SnSp.append([-Jxy/2, m_2*i + 2*j, m_2*i + (2*j+1)])
+  
+      SzSz.append([-Jz, m_2*i + 2*j, m_2*i + (2*j-1)%m_2])
+      SpSn.append([-Jxy/2, m_2*i + 2*j, m_2*i + (2*j-1)%m_2])
+      SnSp.append([-Jxy/2, m_2*i + 2*j, m_2*i + (2*j-1)%m_2])
+      
+      SzSz.append([-Jz, m_2*i + 2*j, (m_2*(i+1) + 2*j+1)%N])
+      SpSn.append([-Jxy/2, m_2*i + 2*j, (m_2*(i+1) + 2*j+1)%N])
+      SnSp.append([-Jxy/2, m_2*i + 2*j, (m_2*(i+1) + 2*j+1)%N])
+      
+      #N.N.N. coupling and DMI for A sites
+      
+      SzSz.append([-J_nnn, m_2*i + 2*j, (m_2*(i+1) + 2*j)%N])
+      SpSn.append([-J_nnn/2 + J_dmi, m_2*i + 2*j, (m_2*(i+1) + 2*j)%N])
+      SnSp.append([-J_nnn/2 - J_dmi, m_2*i + 2*j, (m_2*(i+1) + 2*j)%N])   
+        
+      SzSz.append([-J_nnn, m_2*i + 2*j, m_2*i + (2*j+2)%m_2])
+      SpSn.append([-J_nnn/2 + J_dmi, m_2*i + 2*j, m_2*i + (2*j+2)%m_2])
+      SnSp.append([-J_nnn/2 - J_dmi, m_2*i + 2*j, m_2*i + (2*j+2)%m_2])   
+
+      SzSz.append([-J_nnn, m_2*i + 2*j, (m_2*(i-1) + (2*j-2)%m_2)%N])
+      SpSn.append([-J_nnn/2 + J_dmi, m_2*i + 2*j, (m_2*(i-1) + (2*j-2)%m_2)%N])
+      SnSp.append([-J_nnn/2 - J_dmi, m_2*i + 2*j, (m_2*(i-1) + (2*j-2)%m_2)%N])   
+
+      #N.N.N. coupling and DMI for B sites
+      
+      SzSz.append([-J_nnn, m_2*i + 2*j+1, (m_2*(i+1) + (2*j+3)%m_2)%N])
+      SpSn.append([-J_nnn/2 + J_dmi, m_2*i + 2*j+1, (m_2*(i+1) + (2*j+3)%m_2)%N])
+      SnSp.append([-J_nnn/2 - J_dmi, m_2*i + 2*j+1, (m_2*(i+1) + (2*j+3)%m_2)%N])   
+
+      SzSz.append([-J_nnn, m_2*i + 2*j+1, m_2*i + (2*j-1)%m_2])
+      SpSn.append([-J_nnn/2 + J_dmi, m_2*i + 2*j+1, m_2*i + (2*j-1)%m_2])
+      SnSp.append([-J_nnn/2 - J_dmi, m_2*i + 2*j+1, m_2*i + (2*j-1)%m_2])   
+
+      SzSz.append([-J_nnn, m_2*i + 2*j+1, (m_2*(i-1) + 2*j+1)%N])
+      SpSn.append([-J_nnn/2 + J_dmi, m_2*i + 2*j+1, (m_2*(i-1) + 2*j+1)%N])
+      SnSp.append([-J_nnn/2 - J_dmi, m_2*i + 2*j+1, (m_2*(i-1) + 2*j+1)%N])
+
+  # define spin-spin interaction lists 
+  static = [["+-", SpSn], ["-+", SnSp], ["zz", SzSz], ["z", Sz]]#
+  dynamic = []
+  
+  ### construct Hamiltonian
+  H = hamiltonian(static, dynamic, basis=basis, dtype=np.complex128, check_herm = False)
+  return H
+
 def delta(x):
     e = 0.05
     D = e/(e**2 + x**2) * 1/np.pi
@@ -186,7 +278,7 @@ def dsf_exact(A, B, H, w, beta):
     E1, V1 = H.eigh()
     print(f"E0 = {E1[0]}")
     E1 -= E1[0]
-    print(f"Eigenenergy: {E1}")
+    # print(f"Eigenenergy: {E1}")
     
     A_M = A.tocsr()
     B_M = B.tocsr()

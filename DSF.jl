@@ -1,5 +1,62 @@
 using ITensors
-using ITensorMPS: tdvp, op
+using ITensorMPS
+using LinearAlgebra: svd
+
+function trivial_state(N; QN=false)
+
+    sites = siteinds("S=1/2", N; conserve_qns=QN, qnname_sz="TotalSz")
+
+    states = [isodd(n) ? "Up" : "Dn" for n in 1:N]
+    psi = MPS(Float64, sites, states)
+    # psi = MPS(Float64, sites, "Up")
+
+    # construct trivial state at beta=0
+    # map |Up, Down> to 1/√2(|Up, Down> - |Down, Up>)
+    gates = ITensor[]
+    for j in 1:2:N-1
+        s1 = siteind(psi, j)
+        s2 = siteind(psi, j+1)
+        
+        # Create an operator tensor with 4 indices: (s1, s2) and (s1', s2')
+        g = ITensor(dag(s1), dag(s2), s1', s2')
+        # Index 1 = Up, Index 2 = Down
+        g[s1=>1, s2=>2, s1'=>1, s2'=>2] = 1.0 / sqrt(2)
+        g[s1=>1, s2=>2, s1'=>2, s2'=>1] = 1.0 / sqrt(2)
+
+        push!(gates, g)
+    end
+
+    psi = apply(gates, psi; cutoff=1e-10)
+    psi = noprime(psi)
+
+    println("EPR state fin.")
+    return psi, sites
+end
+
+function purity(psi, sites)
+    #= Return the purity of the physical states TrA(rho^2)
+    psi: aucillary state
+    sites:the sites of the states
+    =#
+
+    N = length(psi)
+    p_inds = [sites[i] for i in 1:2:N]
+    a_inds = [sites[i] for i in 2:2:N]
+
+    T = ITensor(1.0)
+    for i in 1:N
+        T *= psi[i]
+    end
+    U, S, V = svd(T, p_inds)
+
+    purity = 0
+    for i in 1:dim(S, 1)
+        rho = S[i, i]^2
+        purity += rho^2
+    end
+
+    return purity
+end
 
 function TrotterGates_BLBQ(sites, theta, tau)
     # Return Trotter gates exp(-it * h_ij)
@@ -273,7 +330,7 @@ function chi_t(k, H, psi0, sites, Tsteps, dt, filename; nsites=1, cutoff=1e-10, 
     return chi
 end
 
-function chi_x_t(Si, Sj, H, psi0, sites, Tsteps, dt, filename; nsites=1, cutoff=1e-10, maxdim=20, ns=1)
+function chi_x_t(Si, Sj, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1)
 
     chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
 
@@ -298,6 +355,8 @@ function chi_x_t(Si, Sj, H, psi0, sites, Tsteps, dt, filename; nsites=1, cutoff=
         write(io, d)
     end
 
+    nsites = 2
+    ol = 1
     for t in 1:Tsteps
 
         cal_t = time()
@@ -305,7 +364,12 @@ function chi_x_t(Si, Sj, H, psi0, sites, Tsteps, dt, filename; nsites=1, cutoff=
         psi_Sj_t = tdvp(
             H, -im*dt, psi_Sj_t; 
             nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites
+            , outputlevel=ol
         )
+        bonddim = maxlinkdim(psi_Sj_t)
+        if bonddim >= maxdim 
+            nsites = 1
+        end
 
         psi_Sj_t_Si = copy(psi_Sj_t)
         psi_Sj_t_Si[Si] = noprime(op("Sz", sites[Si]) * psi_Sj_t_Si[Si])
@@ -501,7 +565,7 @@ function chi_t_FT(k, H, psi0, sites, Tsteps, dt, filename; nsites=1, cutoff=1e-1
     return chi
 end
 
-function chi_x_t_FT(Si, Sj, H, psi0, sites, Tsteps, dt, filename; nsites=1, cutoff=1e-10, maxdim=20, ns=1)
+function chi_x_t_FT(Si, Sj, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1)
     
     chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
 
@@ -527,25 +591,50 @@ function chi_x_t_FT(Si, Sj, H, psi0, sites, Tsteps, dt, filename; nsites=1, cuto
         write(io, d)
     end
 
+    nsitesA, nsitesB = 1, 1
+    ol = 1
+    overshootA, overshootB = 0, 0
     for t in 1:Tsteps
-
-        ol=1
 
         t_start = time()
 
+        # switch back to TDVP1 to save time.
+        bonddimA, bonddimB = maxlinkdim(psi_Sj_t), maxlinkdim(psi_t)
+        if bonddimA>maxdim
+            nsitesA = 2
+            # overshootA = 1
+        elseif (bonddimA<maxdim) & (overshootA==0) 
+            nsitesA = 1
+            psi_Sj_t = expand(psi_Sj_t, H; 
+            alg="global_krylov", krylovdim=2, cutoff=cutoff)
+        else
+            nsitesA = 1
+        end
+
+        if bonddimB>maxdim
+            nsitesB = 2
+            # overshootB = 1
+        elseif (bonddimB<maxdim) & (overshootB==0) 
+            nsitesB = 1
+            psi_t = expand(psi_t, H; 
+            alg="global_krylov", krylovdim=2, cutoff=cutoff)
+        else 
+            nsitesB = 1
+        end
+
         t1 = Threads.@spawn tdvp(
             H, -im*dt, psi_Sj_t; 
-            nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites, cutoff=cutoff
+            nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsitesA, cutoff=cutoff
             , outputlevel=ol
         )
         t2 = Threads.@spawn tdvp(
             H, -im*dt, psi_t; 
-            nsweeps=ns, maxdim=maxdim, normalize=true, nsite=nsites, cutoff=cutoff
+            nsweeps=ns, maxdim=maxdim, normalize=true, nsite=nsitesB, cutoff=cutoff
             # , outputlevel=ol
         )
 
         psi_Sj_t, psi_t = (fetch(t1), fetch(t2))
-
+        
         println("TDVP Time spent: $(time()-t_start)")
 
         psi_Sj_t_Si = copy(psi_Sj_t)
@@ -567,7 +656,6 @@ function chi_x_t_FT(Si, Sj, H, psi0, sites, Tsteps, dt, filename; nsites=1, cuto
 
     return chi
 end
-
 
 function DSF(chi::AbstractArray{ComplexF64}, Omega::AbstractArray{<:Real}, E0, Tsteps; dt=0.1)
     #= Integrate chi(t) to get DSF = 
