@@ -1,0 +1,661 @@
+using ITensors
+using ITensorMPS
+using LinearAlgebra: svd, dot
+
+function res(x, M) # same as % in python
+    return mod(x-1, M)+1
+end
+
+function H_HC(n, m, J, j, D, h; auc=false, obc_x=false, obc_y=false)
+
+    col = m*2
+    N = n*col 
+
+    r = Any[] # real space position
+    a_1, a_2 = [√(3), 0], [√(3), 3]/2
+
+    os = OpSum()
+
+    # aucillary condition
+    X = (auc) ? 2 : 1
+
+    for a in 0:n-1 
+        for b in 1:m 
+
+            # build basis
+            if auc 
+                push!(r, 0)
+            end
+            push!(r, a*a_1 + b*a_2) # A site
+            if auc 
+                push!(r, 0)
+            end
+            push!(r, a*a_1 + b*a_2 + [√(3), 1]/2) # B site
+
+            # A index
+            y = 2*b - 1
+            i = col*a + y
+            ii = i*X
+
+            # Zeeman
+            os .+= -h, "Sz", ii 
+            os .+= -h, "Sz", ii+1*X
+
+            # A site NN
+            os .+= -J/2, "Sz", ii, "Sz", ii+1*X
+            os .+= -J/4, "S+", ii, "S-", ii+1*X
+            os .+= -J/4, "S-", ii, "S+", ii+1*X
+
+            O_ = (obc_y && y==1) ? 0 : 1
+            os .+= -J*O_/2, "Sz", ii, "Sz", (col*a+res(y-1, col))*X
+            os .+= -J*O_/4, "S+", ii, "S-", (col*a+res(y-1, col))*X
+            os .+= -J*O_/4, "S-", ii, "S+", (col*a+res(y-1, col))*X
+
+            O_ = (obc_x && i+1-col<0) ? 0 : 1
+            os .+= -J*O_/2, "Sz", ii, "Sz", res(i+1-col, N)*X
+            os .+= -J*O_/4, "S+", ii, "S-", res(i+1-col, N)*X
+            os .+= -J*O_/4, "S-", ii, "S+", res(i+1-col, N)*X
+            # println("a NN", i, ": ", i+1, col*a+res(y-1, col), res(i+1-col, N))
+
+            # NNN
+            O_ = (obc_y && y+2>col) ? 0 : 1
+            os .+= -j*O_/2, "Sz", ii, "Sz", (col*a+res(y+2, col))*X
+            os .+= (-j/4 + im*D/2)*O_, "S+", ii, "S-", (col*a+res(y+2, col))*X
+            os .+= (-j/4 - im*D/2)*O_, "S-", ii, "S+", (col*a+res(y+2, col))*X
+
+            O_ = (obc_y && y-2<0) ? 0 : 1
+            os .+= -j*O_/2, "Sz", ii, "Sz", (col*a+res(y-2, col))*X
+            os .+= (-j/4 - im*D/2)*O_, "S+", ii, "S-", (col*a+res(y-2, col))*X
+            os .+= (-j/4 + im*D/2)*O_, "S-", ii, "S+", (col*a+res(y-2, col))*X
+            
+            O_ = (obc_x && i-col<0) ? 0 : 1
+            os .+= -j*O_/2, "Sz", ii, "Sz", res(i-col, N)*X
+            os .+= (-j/4 + im*D/2)*O_, "S+", ii, "S-", res(i-col, N)*X
+            os .+= (-j/4 - im*D/2)*O_, "S-", ii, "S+", res(i-col, N)*X
+            
+            O_ = (obc_x && i+col>N) ? 0 : 1
+            os .+= -j*O_/2, "Sz", ii, "Sz", res(i+col, N)*X
+            os .+= (-j/4 - im*D/2)*O_, "S+", ii, "S-", res(i+col, N)*X
+            os .+= (-j/4 + im*D/2)*O_, "S-", ii, "S+", res(i+col, N)*X
+
+            O_x = (obc_x && a==n-1) ? 0 : 1
+            O_y = (obc_y && y-2<0) ? 0 : 1
+            os .+= (-j/2)*O_x*O_y, "Sz", ii, "Sz", res(col*(a+1)+res(y-2, col), N)*X
+            os .+= (-j/4 + im*D/2)*O_x*O_y, "S+", ii, "S-", res(col*(a+1)+res(y-2, col), N)*X
+            os .+= (-j/4 - im*D/2)*O_x*O_y, "S-", ii, "S+", res(col*(a+1)+res(y-2, col), N)*X
+
+            O_x = (obc_x && a==0) ? 0 : 1
+            O_y = (obc_y && y+2>col) ? 0 : 1
+            os .+= (-j/2)*O_x*O_y, "Sz", ii, "Sz", res(col*(a-1)+res(y+2, col), N)*X
+            os .+= (-j/4 - im*D/2)*O_x*O_y, "S+", ii, "S-", res(col*(a-1)+res(y+2, col), N)*X
+            os .+= (-j/4 + im*D/2)*O_x*O_y, "S-", ii, "S+", res(col*(a-1)+res(y+2, col), N)*X
+            # println("a NNN", ii, ": ", col*a+res(y+2, col), res(i-col, N), res(col*(a+1)+res(y-2, col), N))
+
+            # B index
+            y = 2*b
+            i = col*a + y
+            ii = i*X
+
+            # B site NN
+            os .+= -J/2, "Sz", ii, "Sz", ii-1*X
+            os .+= -J/4, "S+", ii, "S-", ii-1*X
+            os .+= -J/4, "S-", ii, "S+", ii-1*X
+
+            O_ = (obc_y && y+1>col) ? 0 : 1
+            os .+= -J*O_/2, "Sz", ii, "Sz", (col*a+res(y+1, col))*X
+            os .+= -J*O_/4, "S+", ii, "S-", (col*a+res(y+1, col))*X
+            os .+= -J*O_/4, "S-", ii, "S+", (col*a+res(y+1, col))*X
+
+            O_ = (obc_x && i-1+col>N) ? 0 : 1
+            os .+= -J*O_/2, "Sz", ii, "Sz", res(i-1+col, N)*X
+            os .+= -J*O_/4, "S+", ii, "S-", res(i-1+col, N)*X
+            os .+= -J*O_/4, "S-", ii, "S+", res(i-1+col, N)*X
+            # println("b NN", i, ": ", i-1, col*a+res(y+1, col), res(i-1+col, N))
+
+            # NNN
+            O_ = (obc_y && y-2<0) ? 0 : 1
+            os .+= (-j/2)*O_, "Sz", ii, "Sz", (col*a+res(y-2, col))*X
+            os .+= (-j/4 + im*D/2)*O_, "S+", ii, "S-", (col*a+res(y-2, col))*X
+            os .+= (-j/4 - im*D/2)*O_, "S-", ii, "S+", (col*a+res(y-2, col))*X
+            
+            O_ = (obc_y && y+2>col) ? 0 : 1
+            os .+= (-j/2)*O_, "Sz", ii, "Sz", (col*a+res(y+2, col))*X
+            os .+= (-j/4 - im*D/2)*O_, "S+", ii, "S-", (col*a+res(y+2, col))*X
+            os .+= (-j/4 + im*D/2)*O_, "S-", ii, "S+", (col*a+res(y+2, col))*X
+            
+            O_ = (obc_x && i+col<N) ? 0 : 1
+            os .+= (-j/2)*O_, "Sz", ii, "Sz", res(i+col, N)*X
+            os .+= (-j/4 + im*D/2)*O_, "S+", ii, "S-", res(i+col, N)*X
+            os .+= (-j/4 - im*D/2)*O_, "S-", ii, "S+", res(i+col, N)*X
+            
+            O_ = (obc_x && i-col<0) ? 0 : 1
+            os .+= (-j/2)*O_, "Sz", ii, "Sz", res(i-col, N)*X
+            os .+= (-j/4 - im*D/2)*O_, "S+", ii, "S-", res(i-col, N)*X
+            os .+= (-j/4 + im*D/2)*O_, "S-", ii, "S+", res(i-col, N)*X
+
+            O_x = (obc_x && a==0) ? 0 : 1
+            O_y = (obc_y && y+2>col) ? 0 : 1
+            os .+= (-j/2)*O_x*O_y, "Sz", ii, "Sz", res(col*(a-1)+res(y+2, col), N)*X
+            os .+= (-j/4 + im*D/2)*O_x*O_y, "S+", ii, "S-", res(col*(a-1)+res(y+2, col), N)*X
+            os .+= (-j/4 - im*D/2)*O_x*O_y, "S-", ii, "S+", res(col*(a-1)+res(y+2, col), N)*X
+            
+            O_x = (obc_x && a==n-1) ? 0 : 1
+            O_y = (obc_y && y-2<0) ? 0 : 1
+            os .+= (-j/2)*O_x*O_y, "Sz", ii, "Sz", res(col*(a+1)+res(y-2, col), N)*X
+            os .+= (-j/4 - im*D/2)*O_x*O_y, "S+", ii, "S-", res(col*(a+1)+res(y-2, col), N)*X
+            os .+= (-j/4 + im*D/2)*O_x*O_y, "S-", ii, "S+", res(col*(a+1)+res(y-2, col), N)*X
+            # println("b NNN", i, ": ", col*a+res(y-2, col), res(i+col, N), res(col*(a-1)+res(y+2, col), N))
+
+        end
+    end
+    
+    return os, r
+end
+
+function H_aucillary(n, m, J, j, D, h)
+
+    # m -> 2*m
+
+    col = m*2
+    N = n*col 
+
+    r = Any[] # real space position
+    a_1, a_2 = [√(3), 0], [√(3), 3]/2
+
+    os = OpSum()
+
+    for a in 0:n-1 
+        for b in 1:m 
+
+            # build basis
+            push!(r, 0)
+            push!(r, a*a_1 + b*a_2) # A site
+            push!(r, 0)
+            push!(r, a*a_1 + b*a_2 + [√(3), 1]/2) # B site
+
+            y = 2*b - 1
+            i = col*a + y
+            ii = 2*i
+
+            # Zeeman
+            os .+= -h, "Sz", ii 
+            os .+= -h, "Sz", ii+1*2
+
+            # A site NN
+            os .+= -J/2, "Sz", ii, "Sz", ii+1*2
+            os .+= -J/4, "S+", ii, "S-", ii+1*2
+            os .+= -J/4, "S-", ii, "S+", ii+1*2
+
+            os .+= -J/2, "Sz", ii, "Sz", (col*a+res(y-1, col))*2
+            os .+= -J/4, "S+", ii, "S-", (col*a+res(y-1, col))*2
+            os .+= -J/4, "S-", ii, "S+", (col*a+res(y-1, col))*2
+
+            os .+= -J/2, "Sz", ii, "Sz", res(i+1-col, N)*2
+            os .+= -J/4, "S+", ii, "S-", res(i+1-col, N)*2
+            os .+= -J/4, "S-", ii, "S+", res(i+1-col, N)*2
+            # println("a NN", ii, ": ", ii+1*2, (col*a+res(y-1, col))*2, res(i+1-col, N)*2)
+
+            # NNN
+            os .+= -j, "Sz", ii, "Sz", (col*a+res(y+2, col))*2
+            os .+= -j/2 + im*D, "S+", ii, "S-", (col*a+res(y+2, col))*2
+            os .+= -j/2 - im*D, "S-", ii, "S+", (col*a+res(y+2, col))*2
+            
+            os .+= -j, "Sz", ii, "Sz", res(i-col, N)*2
+            os .+= -j/2 + im*D, "S+", ii, "S-", res(i-col, N)*2
+            os .+= -j/2 - im*D, "S-", ii, "S+", res(i-col, N)*2
+
+            os .+= -j, "Sz", ii, "Sz", res(col*(a+1)+res(y-2, col), N)*2
+            os .+= -j/2 + im*D, "S+", ii, "S-", res(col*(a+1)+res(y-2, col), N)*2
+            os .+= -j/2 - im*D, "S-", ii, "S+", res(col*(a+1)+res(y-2, col), N)*2
+            # println("a NNN", ii, ": ", (col*a+res(y+2, col))*2, res(i-col, N)*2, res(col*(a+1)+res(y-2, col), N)*2)
+
+            y = 2*b
+            i = col*a + y
+            ii = 2*i
+
+            # B site NN
+            os .+= -J/2, "Sz", ii, "Sz", ii-1*2
+            os .+= -J/4, "S+", ii, "S-", ii-1*2
+            os .+= -J/4, "S-", ii, "S+", ii-1*2
+
+            os .+= -J/2, "Sz", ii, "Sz", (col*a+res(y+1, col))*2
+            os .+= -J/4, "S+", ii, "S-", (col*a+res(y+1, col))*2
+            os .+= -J/4, "S-", ii, "S+", (col*a+res(y+1, col))*2
+
+            os .+= -J/2, "Sz", ii, "Sz", res(i-1+col, N)*2
+            os .+= -J/4, "S+", ii, "S-", res(i-1+col, N)*2 
+            os .+= -J/4, "S-", ii, "S+", res(i-1+col, N)*2
+            # println("a NN", ii, ": ", ii-1*2, (col*a+res(y+1, col))*2, res(i-1+col, N)*2)
+            
+            # NNN
+            os .+= -j, "Sz", ii, "Sz", (col*a+res(y-2, col))*2
+            os .+= -j/2 + im*D, "S+", ii, "S-", (col*a+res(y-2, col))*2
+            os .+= -j/2 - im*D, "S-", ii, "S+", (col*a+res(y-2, col))*2
+            
+            os .+= -j, "Sz", ii, "Sz", res(i+col, N)*2
+            os .+= -j/2 + im*D, "S+", ii, "S-", res(i+col, N)*2
+            os .+= -j/2 - im*D, "S-", ii, "S+", res(i+col, N)*2
+
+            os .+= -j, "Sz", ii, "Sz", res(col*(a-1)+res(y+2, col), N)*2
+            os .+= -j/2 + im*D, "S+", ii, "S-", res(col*(a-1)+res(y+2, col), N)*2
+            os .+= -j/2 - im*D, "S-", ii, "S+", res(col*(a-1)+res(y+2, col), N)*2
+            # println("a NNN", ii, ": ", (col*a+res(y-2, col))*2, res(i+col, N)*2, res(col*(a-1)+res(y+2, col), N)*2)
+
+        end
+    end
+    
+    return os, r
+end
+
+function trivial_state(N; QN=false)
+
+    sites = siteinds("S=1/2", N; conserve_qns=QN, qnname_sz="TotalSz")
+
+    states = [isodd(n) ? "Up" : "Dn" for n in 1:N]
+    psi = MPS(Float64, sites, states)
+    # psi = MPS(Float64, sites, "Up")
+
+    # construct trivial state at beta=0
+    # map |Up, Down> to 1/√2(|Up, Down> - |Down, Up>)
+    gates = ITensor[]
+    for j in 1:2:N-1
+        s1 = siteind(psi, j)
+        s2 = siteind(psi, j+1)
+        
+        # Create an operator tensor with 4 indices: (s1, s2) and (s1', s2')
+        g = ITensor(dag(s1), dag(s2), s1', s2')
+        # Index 1 = Up, Index 2 = Down
+        g[s1=>1, s2=>2, s1'=>1, s2'=>2] = 1.0 / sqrt(2)
+        g[s1=>1, s2=>2, s1'=>2, s2'=>1] = 1.0 / sqrt(2)
+
+        push!(gates, g)
+    end
+
+    psi = apply(gates, psi; cutoff=1e-10)
+    psi = noprime(psi)
+
+    println("EPR state fin.")
+    return psi, sites
+end
+
+function chi_t(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1)
+
+    chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
+
+    N = length(psi0)
+    centerA, centerB = div(N, 2), div(N, 2)+1
+    psi_Aprime, psi_Bprime = copy(psi0), copy(psi0)
+    psi_Aprime[centerA] = noprime(op(O2, sites[centerA]) * psi0[centerA])
+    psi_Bprime[centerB] = noprime(op(O2, sites[centerB]) * psi0[centerB])
+
+    # t = 0
+    chi_t0 = complex(0.0, 0.0)
+    for j = 1:N
+        psi_Sj_0 = copy(psi_Aprime)
+        psi_Sj_0[j] = noprime(op(O1, sites[j]) * psi_Sj_0[j])
+        phaseK = dot(Q, (r[centerA]-r[j]))
+        chi_t0 += 0.5/√(N) * exp(-im * phaseK) * inner(psi0, psi_Sj_0)
+        psi_Sj_0 = copy(psi_Bprime)
+        psi_Sj_0[j] = noprime(op(O1, sites[j]) * psi_Sj_0[j])
+        phaseK = dot(Q, (r[centerB]-r[j]))
+        chi_t0 += 0.5/√(N) * exp(-im * phaseK) * inner(psi0, psi_Sj_0)
+    end
+
+    # prepare for time evolution
+    psi_SA_t, psi_SB_t = copy(psi_Aprime), copy(psi_Bprime)
+    psi_Aprime, psi_Bprime = nothing, nothing
+
+    # write data
+    open(filename, "w") do io 
+        write(io, "t,RS,IS\n")
+        d = @sprintf("%.2f,%.10f,%.10f\n", 0, chi_t0.re, chi_t0.im)
+        write(io, d)
+    end
+
+    ol = 1
+    for t in 1:Tsteps
+
+        cal_t = time()
+
+        # switch back to TDVP1 to save time.
+        bonddimA, bonddimB = maxlinkdim(psi_SA_t), maxlinkdim(psi_SB_t)
+        if (bonddimA>=maxdim)
+            nsitesA =1 
+        # elseif (bonddimA<maxdim) & (overshootA==0) 
+        elseif t <= 2 
+            nsitesA = 1
+            psi_SA_t = expand(psi_SA_t, H; 
+                alg="global_krylov", krylovdim=2, cutoff=cutoff
+            )
+            psi_SA_t = tdvp(H, -im*dt, psi_SA_t; 
+                nsweeps=ns, maxdim=maxdim, normalize=false, 
+                nsite=nsitesA, outputlevel=ol
+            )
+            nsitesB = 1
+            psi_SB_t = expand(psi_SB_t, H; 
+                alg="global_krylov", krylovdim=2, cutoff=cutoff
+            )
+            psi_SB_t = tdvp(H, -im*dt, psi_SB_t; 
+                nsweeps=ns, maxdim=maxdim, normalize=false, 
+                nsite=nsitesB, outputlevel=ol
+            )
+        elseif (t>2) & (bonddimA<maxdim)
+        # elseif (bonddimA<maxdim)
+            nsitesA = 2
+            psi_SA_t = tdvp(H, -im*dt, psi_SA_t; 
+                nsweeps=ns, maxdim=maxdim, normalize=false, 
+                nsite=nsitesA, outputlevel=ol
+            )
+            nsitesB = 2
+            psi_SB_t = tdvp(H, -im*dt, psi_SB_t; 
+                nsweeps=ns, maxdim=maxdim, normalize=false, 
+                nsite=nsitesB, outputlevel=0
+            )
+        else
+            nsitesA = 1
+            ol=0
+        end
+
+        chi_t_p = complex(0.0, 0.0)
+        # sum over sites
+        for j = 1:N
+            psi_SA_t_Si = copy(psi_SA_t)
+            psi_SA_t_Si[j] = noprime(op(O1, sites[j]) * psi_SA_t_Si[j])
+            # momentum phase
+            phaseK = dot(Q, (r[centerA]-r[j]))
+            chi_t_p += 0.5/√(N) * exp(-im * phaseK) * inner(psi0, psi_SA_t_Si)
+            
+            psi_SB_t_Si = copy(psi_SB_t)
+            psi_SB_t_Si[j] = noprime(op(O1, sites[j]) * psi_SB_t_Si[j])
+            # momentum phase
+            phaseK = dot(Q, (r[centerB]-r[j]))
+            chi_t_p += 0.5/√(N) * exp(-im * phaseK) * inner(psi0, psi_SB_t_Si)
+        end
+        chi_p[t] = chi_t_p 
+
+        if (t % 100) == 0.0 
+            println("T step: $(t), Chi($(t*dt)) finished.")
+            println("Time spent: $(time()-cal_t)")
+            cal_t = time()
+        end
+
+        # write data incase unexpected termination happend
+        open(filename, "a") do io 
+            d = @sprintf("%.2f,%.10f,%.10f\n", t*dt, chi_t_p.re, chi_t_p.im)
+            write(io, d)
+        end
+    end
+
+    chi_n = reverse(conj(chi_p))
+    chi = append!(chi_n, chi_t0, chi_p) # time grid from -T to +T
+
+    return chi
+end
+
+function chi_x_t(O1, O2, Si, Sj, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1)
+
+    chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
+
+    N = length(psi0)
+    psi_prime = copy(psi0)
+    psi_prime[Sj] = noprime(op(O2, sites[Sj]) * psi0[Sj])
+
+    # prepare for time evolution
+    psi_Sj_t = copy(psi_prime)
+
+    # t=0
+    psi_prime[Sj] = noprime(op(O1, sites[Sj]) * psi_prime[Sj])
+    chi_t0 = complex(0.0, 0.0)
+    chi_t0 += inner(psi0, psi_prime)
+    
+    psi_prime = nothing
+    
+    # write data
+    open(filename, "w") do io 
+        write(io, "t,RS,IS\n")
+        d = @sprintf("%.2f,%.10f,%.10f\n", 0, chi_t0.re, chi_t0.im)
+        write(io, d)
+    end
+
+    nsites = 2
+    ol = 1
+    for t in 1:Tsteps
+
+        cal_t = time()
+
+        psi_Sj_t = tdvp(
+            H, -im*dt, psi_Sj_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites
+            , outputlevel=ol
+        )
+        bonddim = maxlinkdim(psi_Sj_t)
+        if bonddim >= maxdim 
+            nsites = 1
+        end
+
+        psi_Sj_t_Si = copy(psi_Sj_t)
+        psi_Sj_t_Si[Si] = noprime(op(O1, sites[Si]) * psi_Sj_t_Si[Si])
+        chi_p[t] += inner(psi0, psi_Sj_t_Si)
+
+        if (t % 100) == 0.0 
+            println("T step: $(t), Chi($(t*dt)) finished.")
+            println("Time spent: $(time()-cal_t)")
+        end
+        
+        # write data incase unexpected termination happend
+        open(filename, "a") do io 
+            d = @sprintf("%.2f,%.10f,%.10f\n", t*dt, chi_p[t].re, chi_p[t].im)
+            write(io, d)
+        end
+    end
+
+    chi_n = reverse(conj(chi_p)) # for operator SS = 1
+    chi = append!(chi_n, chi_t0, chi_p) # time grid from -T to +T
+
+    return chi
+end
+
+function chi_t_FT(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1)
+    
+    chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
+
+    N = length(psi0)
+    centerA, centerB = div(N, 2), div(N, 2)+2
+    psi_t = copy(psi0)
+    psi_Aprime, psi_Bprime = copy(psi0), copy(psi0)
+    psi_Aprime[centerA] = noprime(op(O2, sites[centerA]) * psi0[centerA])
+    psi_Bprime[centerB] = noprime(op(O2, sites[centerB]) * psi0[centerB])
+    
+    # t = 0
+    chi_t0 = complex(0.0, 0.0)
+    for j = 2:2:N
+        psi_Sj_0 = copy(psi_Aprime)
+        psi_Sj_0[j] = noprime(op(O1, sites[j]) * psi_Sj_0[j])
+        phaseK = dot(Q, (r[centerA]-r[j]))
+        chi_t0 += 0.5/√(N/2) * exp(-im*phaseK) * inner(psi0, psi_Sj_0)
+
+        psi_Sj_0 = copy(psi_Bprime)
+        psi_Sj_0[j] = noprime(op(O1, sites[j]) * psi_Sj_0[j])
+        phaseK = dot(Q, (r[centerB]-r[j]))
+        chi_t0 += 0.5/√(N/2) * exp(-im*phaseK) * inner(psi0, psi_Sj_0)
+    end
+
+    # prepare for time evolution
+    psi_SA_t, psi_SB_t = copy(psi_Aprime), copy(psi_Bprime)
+
+    psi_Aprime, psi_Bprime = nothing, nothing
+
+    # write data
+    open(filename, "w") do io 
+        write(io, "t,RS,IS\n")
+        d = @sprintf("%.2f,%.10f,%.10f\n", 0, chi_t0.re, chi_t0.im)
+        write(io, d)
+    end
+
+    for t in 1:Tsteps
+        t_start = time()
+
+        ol=1
+        bonddimA, bonddimB, bonddimt = maxlinkdim(psi_SA_t), maxlinkdim(psi_SB_t), maxlinkdim(psi_t)
+        if bonddimA>=maxdim
+            nsitesA = 1
+        else
+            nsitesA = 2
+        end
+        if bonddimB>=maxdim
+            nsitesB = 1
+        else 
+            nsitesB = 2
+        end
+        if bonddimt>=maxdim
+            nsitest = 1
+        else 
+            nsitest = 2
+        end
+
+        t1 = Threads.@spawn tdvp(
+            H, -im*dt, psi_SA_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsitesA, cutoff=cutoff
+            , outputlevel=ol
+        )
+        t2 = Threads.@spawn tdvp(
+            H, -im*dt, psi_SB_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsitesB, cutoff=cutoff
+            # , outputlevel=ol
+        )
+        t3 = Threads.@spawn tdvp(
+            H, -im*dt, psi_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=true, nsite=nsitest, cutoff=cutoff
+            , outputlevel=ol
+        )
+        psi_SA_t, psi_SB_t, psi_t = (fetch(t1), fetch(t2), fetch(t3))
+
+        println("TDVP Time spent: $(time()-t_start)")
+
+        # t_sumi = time()
+
+        chi_t = complex(0.0, 0.0)
+        for j = 2:2:N
+            psi_Sc_t_Sj = copy(psi_SA_t)
+            psi_Sc_t_Sj[j] = noprime(op(O1, sites[j]) * psi_Sc_t_Sj[j])
+
+            phaseK = dot(Q, (r[centerA]-r[j]))
+            chi_t += 0.5/√(N/2) * exp(-im*phaseK) * inner(psi_t, psi_Sc_t_Sj)
+
+            psi_Sc_t_Sj = copy(psi_SB_t)
+            psi_Sc_t_Sj[j] = noprime(op(O1, sites[j]) * psi_Sc_t_Sj[j])
+
+            phaseK = dot(Q, (r[centerB]-r[j]))
+            chi_t += 0.5/√(N/2) * exp(-im*phaseK) * inner(psi_t, psi_Sc_t_Sj)
+        end
+        # println("Sum i Time spent: $(time()-t_sumi)")
+        
+        chi_p[t] = chi_t 
+
+        println("T step: $(t), Chi($(t*dt)) finished.")
+        println("Loop Time spent: $(time()-t_start)")
+
+        # write data incase unexpected termination happend
+        open(filename, "a") do io 
+            d = @sprintf("%.2f,%.10f,%.10f\n", t*dt, chi_t.re, chi_t.im)
+            write(io, d)
+        end
+    end
+
+    chi_n = reverse(conj(chi_p))
+    chi = append!(chi_n, chi_t0, chi_p) # time grid from -T to +T
+
+    return chi
+end
+
+function chi_x_t_FT(O1, O2, Si, Sj, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1)
+    
+    chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
+
+    N = length(psi0)
+    psi_t = copy(psi0)
+    psi_prime = copy(psi0)
+    psi_prime[Sj] = noprime(op(O2, sites[Sj]) * psi0[Sj])
+
+    # prepare for time evolution
+    psi_Sj_t = copy(psi_prime)
+
+    # t = 0
+    psi_prime[Si] = noprime(op(O1, sites[Si]) * psi_prime[Si])
+    chi_t0 = complex(0.0, 0.0)
+    chi_t0 += inner(psi0, psi_prime)
+
+    psi_prime = nothing
+
+    # write data
+    open(filename, "w") do io 
+        write(io, "t,RS,IS\n")
+        d = @sprintf("%.2f,%.10f,%.10f\n", 0, chi_t0.re, chi_t0.im)
+        write(io, d)
+    end
+
+    nsitesA, nsitesB = 2, 2
+    ol = 1
+    overshootA, overshootB = 0, 0
+    for t in 1:Tsteps
+
+        t_start = time()
+
+        # switch back to TDVP1 to save time.
+        bonddimA, bonddimB = maxlinkdim(psi_Sj_t), maxlinkdim(psi_t)
+        if bonddimA>=maxdim
+            nsitesA = 1
+            # overshootA = 1
+        # elseif (bonddimA<maxdim) & (overshootA==0) 
+        #     nsitesA = 1
+        #     psi_Sj_t = expand(psi_Sj_t, H; 
+        #     alg="global_krylov", krylovdim=2, cutoff=cutoff)
+        else
+            nsitesA = 2
+        end
+
+        if bonddimB>=maxdim
+            nsitesB = 1
+            # overshootB = 1
+        # elseif (bonddimB<maxdim) & (overshootB==0) 
+        #     nsitesB = 1
+        #     psi_t = expand(psi_t, H; 
+        #     alg="global_krylov", krylovdim=2, cutoff=cutoff)
+        else 
+            nsitesB = 2
+        end
+
+        t1 = Threads.@spawn tdvp(
+            H, -im*dt, psi_Sj_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsitesA, cutoff=cutoff
+            , outputlevel=ol
+        )
+        t2 = Threads.@spawn tdvp(
+            H, -im*dt, psi_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=true, nsite=nsitesB, cutoff=cutoff
+            # , outputlevel=ol
+        )
+
+        psi_Sj_t, psi_t = (fetch(t1), fetch(t2))
+        
+        println("TDVP Time spent: $(time()-t_start)")
+
+        psi_Sj_t_Si = copy(psi_Sj_t)
+        psi_Sj_t_Si[Si] = noprime(op(O1, sites[Si]) * psi_Sj_t[Si])
+        chi_p[t] += inner(psi_t, psi_Sj_t_Si) # first operator daggered in the function
+
+        println("T step: $(t), Chi($(t*dt)) finished.")
+        println("Loop Time spent: $(time()-t_start)")
+
+        # write data incase unexpected termination happend
+        open(filename, "a") do io 
+            d = @sprintf("%.2f,%.10f,%.10f\n", t*dt, chi_p[t].re, chi_p[t].im)
+            write(io, d)
+        end
+    end
+
+    chi_n = reverse(conj(chi_p))
+    chi = append!(chi_n, chi_t0, chi_p) # time grid from -T to +T
+
+    return chi
+end
