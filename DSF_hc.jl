@@ -152,99 +152,25 @@ function H_HC(n, m, J, j, D, h; auc=false, obc_x=false, obc_y=false)
     return os, r
 end
 
-function H_aucillary(n, m, J, j, D, h)
-
-    # m -> 2*m
-
-    col = m*2
-    N = n*col 
-
-    r = Any[] # real space position
-    a_1, a_2 = [√(3), 0], [√(3), 3]/2
+function M1_op(N)
 
     os = OpSum()
+    for i in 2:2:N
+        os += 1.0/(N/2), "Sz", i
+    end
+    return os
+end
 
-    for a in 0:n-1 
-        for b in 1:m 
+function M2_op(N)
 
-            # build basis
-            push!(r, 0)
-            push!(r, a*a_1 + b*a_2) # A site
-            push!(r, 0)
-            push!(r, a*a_1 + b*a_2 + [√(3), 1]/2) # B site
-
-            y = 2*b - 1
-            i = col*a + y
-            ii = 2*i
-
-            # Zeeman
-            os .+= -h, "Sz", ii 
-            os .+= -h, "Sz", ii+1*2
-
-            # A site NN
-            os .+= -J/2, "Sz", ii, "Sz", ii+1*2
-            os .+= -J/4, "S+", ii, "S-", ii+1*2
-            os .+= -J/4, "S-", ii, "S+", ii+1*2
-
-            os .+= -J/2, "Sz", ii, "Sz", (col*a+res(y-1, col))*2
-            os .+= -J/4, "S+", ii, "S-", (col*a+res(y-1, col))*2
-            os .+= -J/4, "S-", ii, "S+", (col*a+res(y-1, col))*2
-
-            os .+= -J/2, "Sz", ii, "Sz", res(i+1-col, N)*2
-            os .+= -J/4, "S+", ii, "S-", res(i+1-col, N)*2
-            os .+= -J/4, "S-", ii, "S+", res(i+1-col, N)*2
-            # println("a NN", ii, ": ", ii+1*2, (col*a+res(y-1, col))*2, res(i+1-col, N)*2)
-
-            # NNN
-            os .+= -j, "Sz", ii, "Sz", (col*a+res(y+2, col))*2
-            os .+= -j/2 + im*D, "S+", ii, "S-", (col*a+res(y+2, col))*2
-            os .+= -j/2 - im*D, "S-", ii, "S+", (col*a+res(y+2, col))*2
-            
-            os .+= -j, "Sz", ii, "Sz", res(i-col, N)*2
-            os .+= -j/2 + im*D, "S+", ii, "S-", res(i-col, N)*2
-            os .+= -j/2 - im*D, "S-", ii, "S+", res(i-col, N)*2
-
-            os .+= -j, "Sz", ii, "Sz", res(col*(a+1)+res(y-2, col), N)*2
-            os .+= -j/2 + im*D, "S+", ii, "S-", res(col*(a+1)+res(y-2, col), N)*2
-            os .+= -j/2 - im*D, "S-", ii, "S+", res(col*(a+1)+res(y-2, col), N)*2
-            # println("a NNN", ii, ": ", (col*a+res(y+2, col))*2, res(i-col, N)*2, res(col*(a+1)+res(y-2, col), N)*2)
-
-            y = 2*b
-            i = col*a + y
-            ii = 2*i
-
-            # B site NN
-            os .+= -J/2, "Sz", ii, "Sz", ii-1*2
-            os .+= -J/4, "S+", ii, "S-", ii-1*2
-            os .+= -J/4, "S-", ii, "S+", ii-1*2
-
-            os .+= -J/2, "Sz", ii, "Sz", (col*a+res(y+1, col))*2
-            os .+= -J/4, "S+", ii, "S-", (col*a+res(y+1, col))*2
-            os .+= -J/4, "S-", ii, "S+", (col*a+res(y+1, col))*2
-
-            os .+= -J/2, "Sz", ii, "Sz", res(i-1+col, N)*2
-            os .+= -J/4, "S+", ii, "S-", res(i-1+col, N)*2 
-            os .+= -J/4, "S-", ii, "S+", res(i-1+col, N)*2
-            # println("a NN", ii, ": ", ii-1*2, (col*a+res(y+1, col))*2, res(i-1+col, N)*2)
-            
-            # NNN
-            os .+= -j, "Sz", ii, "Sz", (col*a+res(y-2, col))*2
-            os .+= -j/2 + im*D, "S+", ii, "S-", (col*a+res(y-2, col))*2
-            os .+= -j/2 - im*D, "S-", ii, "S+", (col*a+res(y-2, col))*2
-            
-            os .+= -j, "Sz", ii, "Sz", res(i+col, N)*2
-            os .+= -j/2 + im*D, "S+", ii, "S-", res(i+col, N)*2
-            os .+= -j/2 - im*D, "S-", ii, "S+", res(i+col, N)*2
-
-            os .+= -j, "Sz", ii, "Sz", res(col*(a-1)+res(y+2, col), N)*2
-            os .+= -j/2 + im*D, "S+", ii, "S-", res(col*(a-1)+res(y+2, col), N)*2
-            os .+= -j/2 - im*D, "S-", ii, "S+", res(col*(a-1)+res(y+2, col), N)*2
-            # println("a NNN", ii, ": ", (col*a+res(y-2, col))*2, res(i+col, N)*2, res(col*(a-1)+res(y+2, col), N)*2)
-
+    os = OpSum()
+    N2 = (N/2)^2
+    for i in 2:2:N
+        for j in 2:2:N
+            os += 1.0/N2, "Sz", i, "Sz", j
         end
     end
-    
-    return os, r
+    return os
 end
 
 function trivial_state(N; QN=false)
@@ -328,7 +254,7 @@ function chi_t(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10,
                 alg="global_krylov", krylovdim=2, cutoff=cutoff
             )
             psi_SA_t = tdvp(H, -im*dt, psi_SA_t; 
-                nsweeps=ns, maxdim=maxdim, normalize=false, 
+                nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
                 nsite=nsitesA, outputlevel=ol
             )
             nsitesB = 1
@@ -336,19 +262,19 @@ function chi_t(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10,
                 alg="global_krylov", krylovdim=2, cutoff=cutoff
             )
             psi_SB_t = tdvp(H, -im*dt, psi_SB_t; 
-                nsweeps=ns, maxdim=maxdim, normalize=false, 
+                nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
                 nsite=nsitesB, outputlevel=ol
             )
         elseif (t>2) & (bonddimA<maxdim)
         # elseif (bonddimA<maxdim)
             nsitesA = 2
             psi_SA_t = tdvp(H, -im*dt, psi_SA_t; 
-                nsweeps=ns, maxdim=maxdim, normalize=false, 
+                nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
                 nsite=nsitesA, outputlevel=ol
             )
             nsitesB = 2
             psi_SB_t = tdvp(H, -im*dt, psi_SB_t; 
-                nsweeps=ns, maxdim=maxdim, normalize=false, 
+                nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
                 nsite=nsitesB, outputlevel=0
             )
         else
@@ -423,11 +349,33 @@ function chi_x_t(O1, O2, Si, Sj, H, psi0, sites, Tsteps, dt, filename; cutoff=1e
 
         cal_t = time()
 
-        psi_Sj_t = tdvp(
-            H, -im*dt, psi_Sj_t; 
-            nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites
-            , outputlevel=ol
-        )
+        # -- trial --
+        if t<3
+            nsites = 1
+            psi_Sj_t = expand(psi_Sj_t, H; 
+                alg="global_krylov", krylovdim=2, cutoff=cutoff
+            )
+            psi_Sj_t = tdvp(
+                H, -im*dt, psi_Sj_t; 
+                nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites, cutoff=cutoff
+                , outputlevel=ol
+            )
+
+            # psi_Sj_t = psi_Sj_t + apply(-im*dt*H, psi_Sj_t; cutoff)
+            # println("Taylor exp")
+        else
+            nsites = 2
+            psi_Sj_t = tdvp(
+                H, -im*dt, psi_Sj_t; 
+                nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites, cutoff=cutoff
+                , outputlevel=ol
+            )
+        end
+        # psi_Sj_t = tdvp(
+        #     H, -im*dt, psi_Sj_t; 
+        #     nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites, cutoff=cutoff,
+        #     , outputlevel=ol
+        # )
         bonddim = maxlinkdim(psi_Sj_t)
         if bonddim >= maxdim 
             nsites = 1
