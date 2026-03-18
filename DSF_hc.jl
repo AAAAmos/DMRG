@@ -255,12 +255,16 @@ function trivial_state(::SpinOne, N; QN=false)
     return psi, sites
 end
 
-function chi_t(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1)
+function chi_t(O1, O2, Q, r, H, E0, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1, centerA=0, centerB=0)
 
     chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
 
     N = length(psi0)
-    centerA, centerB = div(N, 2), div(N, 2)+1
+    if centerA == 0
+        centerA, centerB = div(N, 2), div(N, 2)+2
+    end
+    println("Core A: ", centerA, "Core B: ", centerB)
+    println(" ")
     psi_Aprime, psi_Bprime = copy(psi0), copy(psi0)
     psi_Aprime[centerA] = noprime(op(O2, sites[centerA]) * psi0[centerA])
     psi_Bprime[centerB] = noprime(op(O2, sites[centerB]) * psi0[centerB])
@@ -292,68 +296,48 @@ function chi_t(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10,
     ol = 1
     for t in 1:Tsteps
 
-        cal_t = time()
+        t_start = time()
 
         # switch back to TDVP1 to save time.
         bonddimA, bonddimB = maxlinkdim(psi_SA_t), maxlinkdim(psi_SB_t)
-        if (bonddimA>=maxdim)
-            nsitesA =1 
-        # elseif (bonddimA<maxdim) & (overshootA==0) 
-        elseif t <= 2 
-            nsitesA = 1
-            psi_SA_t = expand(psi_SA_t, H; 
-                alg="global_krylov", krylovdim=2, cutoff=cutoff
-            )
-            psi_SA_t = tdvp(H, -im*dt, psi_SA_t; 
-                nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
-                nsite=nsitesA, outputlevel=ol
-            )
-            nsitesB = 1
-            psi_SB_t = expand(psi_SB_t, H; 
-                alg="global_krylov", krylovdim=2, cutoff=cutoff
-            )
-            psi_SB_t = tdvp(H, -im*dt, psi_SB_t; 
-                nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
-                nsite=nsitesB, outputlevel=ol
-            )
-        elseif (t>2) & (bonddimA<maxdim)
-        # elseif (bonddimA<maxdim)
-            nsitesA = 2
-            psi_SA_t = tdvp(H, -im*dt, psi_SA_t; 
-                nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
-                nsite=nsitesA, outputlevel=ol
-            )
-            nsitesB = 2
-            psi_SB_t = tdvp(H, -im*dt, psi_SB_t; 
-                nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
-                nsite=nsitesB, outputlevel=0
-            )
-        else
-            nsitesA = 1
-            ol=0
-        end
+
+        nsitesA = (bonddimA>=maxdim) ? 1 : 2
+        nsitesB = (bonddimB>=maxdim) ? 1 : 2
+
+        t1 = Threads.@spawn tdvp(H, -im*dt, psi_SA_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
+            nsite=nsitesA, outputlevel=ol
+        )
+        t2 = Threads.@spawn tdvp(H, -im*dt, psi_SB_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
+            nsite=nsitesB, outputlevel=ol
+        )
+        psi_SA_t, psi_SB_t = (fetch(t1), fetch(t2))
 
         chi_t_p = complex(0.0, 0.0)
         # sum over sites
         for j = 1:N
+            C = 0.5/√(N) * exp(im * E0 * t*dt) # from U^\dagger (t)
+
             psi_SA_t_Si = copy(psi_SA_t)
             psi_SA_t_Si[j] = noprime(op(O1, sites[j]) * psi_SA_t_Si[j])
             # momentum phase
             phaseK = dot(Q, (r[centerA]-r[j]))
-            chi_t_p += 0.5/√(N) * exp(-im * phaseK) * inner(psi0, psi_SA_t_Si)
+            chi_t_p += C * exp(-im * phaseK) * inner(psi0, psi_SA_t_Si)
             
             psi_SB_t_Si = copy(psi_SB_t)
             psi_SB_t_Si[j] = noprime(op(O1, sites[j]) * psi_SB_t_Si[j])
             # momentum phase
             phaseK = dot(Q, (r[centerB]-r[j]))
-            chi_t_p += 0.5/√(N) * exp(-im * phaseK) * inner(psi0, psi_SB_t_Si)
+            chi_t_p += C * exp(-im * phaseK) * inner(psi0, psi_SB_t_Si)
         end
         chi_p[t] = chi_t_p 
 
-        if (t % 100) == 0.0 
-            println("T step: $(t), Chi($(t*dt)) finished.")
-            println("Time spent: $(time()-cal_t)")
-            cal_t = time()
+        println("T step: $(t), Chi($(t*dt)) finished.")
+        println("Loop Time spent: $(time()-t_start)")
+
+        if mod(t, 20) == 0
+            println("Process peak RSS (MB): ", Sys.maxrss()/1.04E6)
         end
 
         # write data incase unexpected termination happend
@@ -363,13 +347,13 @@ function chi_t(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10,
         end
     end
 
-    chi_n = reverse(conj(chi_p))
-    chi = append!(chi_n, chi_t0, chi_p) # time grid from -T to +T
+    # chi_n = reverse(conj(chi_p))
+    # chi = append!(chi_n, chi_t0, chi_p) # time grid from -T to +T
 
-    return chi
+    return chi_p
 end
 
-function chi_x_t(O1, O2, Si, Sj, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1)
+function chi_x_t(O1, O2, Si, Sj, H, E0, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1)
 
     chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
 
@@ -400,33 +384,33 @@ function chi_x_t(O1, O2, Si, Sj, H, psi0, sites, Tsteps, dt, filename; cutoff=1e
 
         cal_t = time()
 
-        # -- trial --
-        if t<3
-            nsites = 1
-            psi_Sj_t = expand(psi_Sj_t, H; 
-                alg="global_krylov", krylovdim=2, cutoff=cutoff
-            )
-            psi_Sj_t = tdvp(
-                H, -im*dt, psi_Sj_t; 
-                nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites, cutoff=cutoff
-                , outputlevel=ol
-            )
+        # # -- trial --
+        # if t<3
+        #     nsites = 1
+        #     psi_Sj_t = expand(psi_Sj_t, H; 
+        #         alg="global_krylov", krylovdim=2, cutoff=cutoff
+        #     )
+        #     psi_Sj_t = tdvp(
+        #         H, -im*dt, psi_Sj_t; 
+        #         nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites, cutoff=cutoff
+        #         , outputlevel=ol
+        #     )
 
-            # psi_Sj_t = psi_Sj_t + apply(-im*dt*H, psi_Sj_t; cutoff)
-            # println("Taylor exp")
-        else
-            nsites = 2
-            psi_Sj_t = tdvp(
-                H, -im*dt, psi_Sj_t; 
-                nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites, cutoff=cutoff
-                , outputlevel=ol
-            )
-        end
-        # psi_Sj_t = tdvp(
-        #     H, -im*dt, psi_Sj_t; 
-        #     nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites, cutoff=cutoff,
-        #     , outputlevel=ol
-        # )
+        #     # psi_Sj_t = psi_Sj_t + apply(-im*dt*H, psi_Sj_t; cutoff)
+        #     # println("Taylor exp")
+        # else
+        #     nsites = 2
+        #     psi_Sj_t = tdvp(
+        #         H, -im*dt, psi_Sj_t; 
+        #         nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites, cutoff=cutoff
+        #         , outputlevel=ol
+        #     )
+        # end
+        psi_Sj_t = tdvp(
+            H, -im*dt, psi_Sj_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=false, nsite=nsites, cutoff=cutoff
+            , outputlevel=ol
+        )
         bonddim = maxlinkdim(psi_Sj_t)
         if bonddim >= maxdim 
             nsites = 1
@@ -434,7 +418,7 @@ function chi_x_t(O1, O2, Si, Sj, H, psi0, sites, Tsteps, dt, filename; cutoff=1e
 
         psi_Sj_t_Si = copy(psi_Sj_t)
         psi_Sj_t_Si[Si] = noprime(op(O1, sites[Si]) * psi_Sj_t_Si[Si])
-        chi_p[t] += inner(psi0, psi_Sj_t_Si)
+        chi_p[t] += inner(psi0, psi_Sj_t_Si) * exp(im * E0 * t*dt)
 
         if (t % 100) == 0.0 
             println("T step: $(t), Chi($(t*dt)) finished.")

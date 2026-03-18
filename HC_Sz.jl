@@ -10,9 +10,9 @@ let
     Total_time = time()
 
 #  -- Physical parameter setup ---
-    N = 3
-    M = 6
-    Jnn, Jnnn, DMI, h = 1, 0.1, 0.1, 0.1
+    N = 2
+    M = 2
+    Jnn, Jnnn, DMI, h = 1, 0.1, 0., 0.1
     ani = 0.
 
     obc_x = false 
@@ -31,13 +31,15 @@ let
     d_beta = 0.01
 
 #  -- numerical setup ---
-    dmrg_linkdim = 10
-    dmrg_maxdim = [200, 200, 200, 200, 200]
+    dmrg_sw = 5
+    dmrg_linkdim = 256
+    # dmrg_maxdim = [200, 200, 200, 200, 200]
+    dmrg_maxdim = ones(Int, dmrg_sw) * dmrg_linkdim
     maxdim = 8
     QN_conservation = true
 
 #  -- evolution accuracy --
-    psi_cutoff = 1E-8
+    psi_cutoff = 1E-10
     println("State cutoff: ", psi_cutoff)
     
 #  -- files --
@@ -53,85 +55,85 @@ let
 
 #  -- physical states --
 
-    # sites = siteinds("S=1/2", N*M*2; conserve_sz = QN_conservation)
-    # states = ["Up" for n in 1:N*M*2]
-    # psi = MPS(Float64, sites, states)
+    sites = siteinds("S=1/2", N*M*2; conserve_sz = QN_conservation)
+    states = ["Up" for n in 1:N*M*2]
+    psi = MPS(Float64, sites, states)
 
-    # H, r = H_HC(N, M, Jnn, Jnnn, DMI, h; auc=false, obc_x, obc_y)
-    # H = MPO(H, sites)
+    H, r = H_HC(N, M, Jnn, Jnnn, DMI, h, ani; auc=false, obc_x, obc_y)
+    H = MPO(H, sites)
 
 #  -- dmrg --
-    # E0, psi0 = dmrg(H, psi; 
-    #     nsweeps=10, maxdim=dmrg_maxdim, cutoff=psi_cutoff, outputlevel=1
-    # )
+    E0, psi0 = dmrg(H, psi; 
+        nsweeps=10, maxdim=dmrg_maxdim, cutoff=psi_cutoff, outputlevel=1
+    )
     # mean_sz = mean(expect(psi0, "Sz"))
 
-    open(E_file, "w") do io 
-        if obc_y 
-            # Sz profile
-            write(io, "beta,E,Sz,M2,dim")
-            for i in 1:M 
-                write(io, ",Sz$i")
-            end
-            write(io, "\n")
-        else
-            # Mean Sz
-            write(io, "beta,E,Sz,M2,dim\n")
-            # d = @sprintf("%.i,%.10f,%.5f,%.i\n", 100000, E0, mean_sz, maxlinkdim(psi0))
-            # write(io, d)
-        end
-    end
+    # open(E_file, "w") do io 
+    #     if obc_y 
+    #         # Sz profile
+    #         write(io, "beta,E,Sz,M2,dim")
+    #         for i in 1:M 
+    #             write(io, ",Sz$i")
+    #         end
+    #         write(io, "\n")
+    #     else
+    #         # Mean Sz
+    #         write(io, "beta,E,Sz,M2,dim\n")
+    #         # d = @sprintf("%.i,%.10f,%.5f,%.i\n", 100000, E0, mean_sz, maxlinkdim(psi0))
+    #         # write(io, d)
+    #     end
+    # end
 
-    # Psi_file = @sprintf(
-    #     "./HC_data/%.i%.i_DM%.2f_Ox%s_Oy%s_GS_k%.i_QNf_psi.jld2",
-    #     N, M, DMI, Ox, Oy, maxdim
-    # )
-    # save_object(Psi_file, psi0)
-    # Sites_file = @sprintf(
-    #     "./HC_data/%.i%.i_DM%.2f_Ox%s_Oy%s_GS_k%.i_QNf_sites.jld2",
-    #     N, M, DMI, Ox, Oy, maxdim
-    # )
-    # save_object(Sites_file, sites)
+    Psi_file = @sprintf(
+        "./HC_data/Psi/%.i%.i_DM%.2f_Ox%s_Oy%s_GS_k%.i_QNt_psi.jld2",
+        N, M, DMI, Ox, Oy, dmrg_linkdim
+    )
+    save_object(Psi_file, psi0)
+    Sites_file = @sprintf(
+        "./HC_data/Psi/%.i%.i_DM%.2f_Ox%s_Oy%s_GS_k%.i_QNt_sites.jld2",
+        N, M, DMI, Ox, Oy, dmrg_linkdim
+    )
+    save_object(Sites_file, sites)
 
     # psi0 = nothing 
 
 # --- finite T ---
     
 #  -- aucillary states --
-    psi_beta, sites = trivial_state(SpinHalf(), N*M*2*2, QN=QN_conservation) # |psi(beta=0)>
-    H, r = H_HC(N, M, Jnn, Jnnn, DMI, h, ani; auc=true, obc_x, obc_y)
-    H = MPO(H, sites)
-    M1OP = MPO(M1_op(N*M*2), sites)
-    M2OP = MPO(M2_op(N*M*2), sites)
+    # psi_beta, sites = trivial_state(SpinHalf(), N*M*2*2, QN=QN_conservation) # |psi(beta=0)>
+    # H, r = H_HC(N, M, Jnn, Jnnn, DMI, h, ani; auc=true, obc_x, obc_y)
+    # H = MPO(H, sites)
+    # M1OP = MPO(M1_op(N*M*2), sites)
+    # M2OP = MPO(M2_op(N*M*2), sites)
 
-    for i in 1:length(beta_list)-1
+    # for i in 1:length(beta_list)-1
 
-        b = beta_list[i+1]-beta_list[i]
-        beta = beta_list[i+1]
-        nsweeps = round(Int, b/d_beta)
+    #     b = beta_list[i+1]-beta_list[i]
+    #     beta = beta_list[i+1]
+    #     nsweeps = round(Int, b/d_beta)
 
-        if maxlinkdim(psi_beta) == maxdim
-            nsites = 1
-        else
-            nsites = 2
-        end
+    #     if maxlinkdim(psi_beta) == maxdim
+    #         nsites = 1
+    #     else
+    #         nsites = 2
+    #     end
 
-        # psi_beta = expand(psi_beta, H; 
-        #         alg="global_krylov", krylovdim=2, cutoff=psi_cutoff
-        #     )
-        # psi_beta = tdvp(
-        #     H, -b/2, psi_beta; 
-        #     nsweeps=nsweeps, maxdim=maxdim, normalize=true, nsite=1, cutoff=psi_cutoff
-        #     , outputlevel=1
-        # )
-        psi_beta = tdvp(
-            H, -b/2, psi_beta; 
-            nsweeps=nsweeps, maxdim=maxdim, normalize=true, nsite=nsites, cutoff=psi_cutoff
-            , outputlevel=1#, write_when_maxdim_exceeds #, write_path
-        )
-        println("Process peak RSS (MB): ", Sys.maxrss()/1.04E6)
-        println("Cooldown fin.")
-        println("Beta = ", beta)
+    #     # psi_beta = expand(psi_beta, H; 
+    #     #         alg="global_krylov", krylovdim=2, cutoff=psi_cutoff
+    #     #     )
+    #     # psi_beta = tdvp(
+    #     #     H, -b/2, psi_beta; 
+    #     #     nsweeps=nsweeps, maxdim=maxdim, normalize=true, nsite=1, cutoff=psi_cutoff
+    #     #     , outputlevel=1
+    #     # )
+    #     psi_beta = tdvp(
+    #         H, -b/2, psi_beta; 
+    #         nsweeps=nsweeps, maxdim=maxdim, normalize=true, nsite=nsites, cutoff=psi_cutoff
+    #         , outputlevel=1#, write_when_maxdim_exceeds #, write_path
+    #     )
+    #     println("Process peak RSS (MB): ", Sys.maxrss()/1.04E6)
+    #     println("Cooldown fin.")
+    #     println("Beta = ", beta)
 
 #   - Save psi -
         # if beta in save_list
@@ -148,34 +150,34 @@ let
         # end
 
 #   - Mz, Purity, E -
-        Mz = inner(psi_beta', M1OP, psi_beta)
-        M2 = inner(psi_beta', M2OP, psi_beta)
-        E_beta = inner(psi_beta', H, psi_beta; cutoff=psi_cutoff)
+    #     Mz = inner(psi_beta', M1OP, psi_beta)
+    #     M2 = inner(psi_beta', M2OP, psi_beta)
+    #     E_beta = inner(psi_beta', H, psi_beta; cutoff=psi_cutoff)
 
-        dim = maxlinkdim(psi_beta)
+    #     dim = maxlinkdim(psi_beta)
 
-        open(E_file, "a") do io
-            if obc_y 
-                # Sz profile
-                Sz_i = expect(psi_beta, "Sz"; sites=1:M)
+    #     open(E_file, "a") do io
+    #         if obc_y 
+    #             # Sz profile
+    #             Sz_i = expect(psi_beta, "Sz"; sites=1:M)
                 
-                d = @sprintf("%.4f,%.10f,%.10f,%.10f,%.i", beta, real(E_beta), real(Mz), real(M2), dim)
-                write(io, d)
+    #             d = @sprintf("%.4f,%.10f,%.10f,%.10f,%.i", beta, real(E_beta), real(Mz), real(M2), dim)
+    #             write(io, d)
             
-                for i in 1:M 
-                    d = @sprintf(",%.6f", real(Sz_i[i]))
-                    write(io, d)
-                end
-                write(io, "\n")
+    #             for i in 1:M 
+    #                 d = @sprintf(",%.6f", real(Sz_i[i]))
+    #                 write(io, d)
+    #             end
+    #             write(io, "\n")
                 
-            else
-                d = @sprintf("%.4f,%.10f,%.10f,%.10f,%.i\n", beta, real(E_beta), real(Mz), real(M2), dim)
-                write(io, d)
-            end
-        end
+    #         else
+    #             d = @sprintf("%.4f,%.10f,%.10f,%.10f,%.i\n", beta, real(E_beta), real(Mz), real(M2), dim)
+    #             write(io, d)
+    #         end
+    #     end
 
-        GC.gc()
-    end
+    #     GC.gc()
+    # end
 
     println("Total computational time: $(time()-Total_time)")
 end

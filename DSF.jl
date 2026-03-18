@@ -393,6 +393,120 @@ function chi_x_t(Si, Sj, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, max
     return chi
 end
 
+function chi_t_expand(O1, O2, Q, r, H, E0, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1)
+
+    chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
+
+    N = length(psi0)
+    centerA, centerB = div(N, 2), div(N, 2)+1
+    psi_Aprime, psi_Bprime = copy(psi0), copy(psi0)
+    psi_Aprime[centerA] = noprime(op(O2, sites[centerA]) * psi0[centerA])
+    psi_Bprime[centerB] = noprime(op(O2, sites[centerB]) * psi0[centerB])
+
+    # t = 0
+    chi_t0 = complex(0.0, 0.0)
+    for j = 1:N
+        psi_Sj_0 = copy(psi_Aprime)
+        psi_Sj_0[j] = noprime(op(O1, sites[j]) * psi_Sj_0[j])
+        phaseK = dot(Q, (r[centerA]-r[j]))
+        chi_t0 += 0.5/√(N) * exp(-im * phaseK) * inner(psi0, psi_Sj_0)
+        psi_Sj_0 = copy(psi_Bprime)
+        psi_Sj_0[j] = noprime(op(O1, sites[j]) * psi_Sj_0[j])
+        phaseK = dot(Q, (r[centerB]-r[j]))
+        chi_t0 += 0.5/√(N) * exp(-im * phaseK) * inner(psi0, psi_Sj_0)
+    end
+
+    # prepare for time evolution
+    psi_SA_t, psi_SB_t = copy(psi_Aprime), copy(psi_Bprime)
+    psi_Aprime, psi_Bprime = nothing, nothing
+
+    # write data
+    open(filename, "w") do io 
+        write(io, "t,RS,IS\n")
+        d = @sprintf("%.2f,%.10f,%.10f\n", 0, chi_t0.re, chi_t0.im)
+        write(io, d)
+    end
+
+    ol = 1
+    for t in 1:Tsteps
+
+        cal_t = time()
+
+        # switch back to TDVP1 to save time.
+        bonddimA, bonddimB = maxlinkdim(psi_SA_t), maxlinkdim(psi_SB_t)
+        if (bonddimA>=maxdim)
+            nsitesA =1 
+        # elseif (bonddimA<maxdim) & (overshootA==0) 
+        elseif t <= 2 
+            nsitesA = 1
+            psi_SA_t = expand(psi_SA_t, H; 
+                alg="global_krylov", krylovdim=2, cutoff=cutoff
+            )
+            psi_SA_t = tdvp(H, -im*dt, psi_SA_t; 
+                nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
+                nsite=nsitesA, outputlevel=ol
+            )
+            nsitesB = 1
+            psi_SB_t = expand(psi_SB_t, H; 
+                alg="global_krylov", krylovdim=2, cutoff=cutoff
+            )
+            psi_SB_t = tdvp(H, -im*dt, psi_SB_t; 
+                nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
+                nsite=nsitesB, outputlevel=ol
+            )
+        elseif (t>2) & (bonddimA<maxdim)
+        # elseif (bonddimA<maxdim)
+            nsitesA = 2
+            psi_SA_t = tdvp(H, -im*dt, psi_SA_t; 
+                nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
+                nsite=nsitesA, outputlevel=ol
+            )
+            nsitesB = 2
+            psi_SB_t = tdvp(H, -im*dt, psi_SB_t; 
+                nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
+                nsite=nsitesB, outputlevel=0
+            )
+        else
+            nsitesA = 1
+            ol=0
+        end
+
+        chi_t_p = complex(0.0, 0.0)
+        # sum over sites
+        for j = 1:N
+            psi_SA_t_Si = copy(psi_SA_t)
+            psi_SA_t_Si[j] = noprime(op(O1, sites[j]) * psi_SA_t_Si[j])
+            # momentum phase
+            phaseK = dot(Q, (r[centerA]-r[j]))
+            chi_t_p += 0.5/√(N) * exp(-im * phaseK) * exp(im * E0 * t*dt) * inner(psi0, psi_SA_t_Si)
+            
+            psi_SB_t_Si = copy(psi_SB_t)
+            psi_SB_t_Si[j] = noprime(op(O1, sites[j]) * psi_SB_t_Si[j])
+            # momentum phase
+            phaseK = dot(Q, (r[centerB]-r[j]))
+            chi_t_p += 0.5/√(N) * exp(-im * phaseK) * exp(im * E0 * t*dt) * inner(psi0, psi_SB_t_Si)
+        end
+        chi_p[t] = chi_t_p 
+
+        if (t % 100) == 0.0 
+            println("T step: $(t), Chi($(t*dt)) finished.")
+            println("Time spent: $(time()-cal_t)")
+            cal_t = time()
+        end
+
+        # write data incase unexpected termination happend
+        open(filename, "a") do io 
+            d = @sprintf("%.2f,%.10f,%.10f\n", t*dt, chi_t_p.re, chi_t_p.im)
+            write(io, d)
+        end
+    end
+
+    chi_n = reverse(conj(chi_p))
+    chi = append!(chi_n, chi_t0, chi_p) # time grid from -T to +T
+
+    return chi
+end
+
 function chi_t_test(k, H, psi0, sites, Tsteps, dt; nsites=1, cutoff=1e-10, maxdim=20)
 
     # # observer method (optimization)

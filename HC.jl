@@ -15,16 +15,19 @@ let
     N = 2
     M = 2
     Jnn, Jnnn, DMI, h = 1, 0.1, 0.0, 0.1
+    ani = 0.
 
     obc_x = false 
     obc_y = false
     Ox, Oy = "f", "f"
 
-    O1, O2 = "Sz", "Sz"
-    operators = "zz"
+    O1, O2 = "S+", "S-"
+    operators = "+-"
 
 #  -- Temperature --
     beta = 1/1
+    # !!! FT 3 threads
+    # !!! GS 2 threads
 
 #  -- momentum --
     #=  a_1, a_2 = [√(3), 0], [√(3), 3]/2
@@ -39,45 +42,36 @@ let
     )
 
 #  -- numerical setup ---
-    dmrg_linkdim = 10
-    dmrg_maxdim = [200, 200, 200, 200, 200]
-    maxdim = 256
+    dmrg_sw = 5
+    dmrg_linkdim = 256
+    dmrg_maxdim = ones(Int, dmrg_sw) * dmrg_linkdim
+    maxdim = 20
 
 #  -- evolution accuracy --
     psi_cutoff = 1E-10
-    time_cutoff = 1E-12
+    time_cutoff = 1E-10
     println("State cutoff: ", psi_cutoff)
 
 #  -- Time step --
-    dtau = 0.1
-    tausweep = 2
-    Tsteps = 100
+    dtau = 0.05
+    tausweep = 1
+    Tsteps = 600
 
 # --- T=0 ---
 
 #  -- physical states --
 
-    # Psi_file = @sprintf(
-    #     "./HC_data/%.i%.i_DM%.2f_Ox%s_Oy%s_GS_k%.i_QNf_psi.jld2",
-    #     N, M, DMI, Ox, Oy, maxdim
-    # )
-    # Sites_file = @sprintf(
-    #     "./HC_data/%.i%.i_DM%.2f_Ox%s_Oy%s_GS_k%.i_QNf_sites.jld2",
-    #     N, M, DMI, Ox, Oy, maxdim
-    # )
-    # psi0 = load_object(Psi_file)
-    # sites = load_object(Sites_file)
+    sites = siteinds("S=1/2", N*M*2; conserve_sz = true)
+    states = ["Up" for n in 1:N*M*2]
+    psi = MPS(Float64, sites, states)
 
-    # sites = siteinds("S=1/2", N*M*2; conserve_sz = false)
-    # states = ["Up" for n in 1:N*M*2]
-    # psi = MPS(Float64, sites, states)
+#  -- dmrg --
+    H, r = H_HC(N, M, Jnn, Jnnn, DMI, h, ani; auc=false, obc_x, obc_y)
+    H = MPO(H, sites)
 
-    # H, r = H_HC(N, M, Jnn, Jnnn, DMI, h; auc=false, obc_x, obc_y)
-    # H = MPO(H, sites)
-    
-    # E0, psi0 = dmrg(H, psi; 
-    #     nsweeps=10, maxdim=dmrg_maxdim, cutoff=psi_cutoff, outputlevel=1
-    # )
+    E0, psi0 = dmrg(H, psi; 
+        nsweeps=dmrg_sw, maxdim=dmrg_maxdim, cutoff=psi_cutoff, outputlevel=1
+    )
 
 #  -- Real space, real time --
     # BLAS.set_num_threads(1)
@@ -89,25 +83,25 @@ let
     #     N, M, DMI, Ox, Oy, S1, S2,
     #     Int(log10(psi_cutoff)), dtau*Tsteps 
     # )
+    # println(filename)
 
     # O1, O2 = "S+", "S-"
-    # chi = chi_x_t(O1, O2, S1, S2, H, psi0, sites, Tsteps, dtau, filename; 
+    # chi = chi_x_t(O1, O2, S1, S2, H, E0, psi0, sites, Tsteps, dtau, filename; 
     #     cutoff=time_cutoff, maxdim=maxdim, ns=tausweep
     # )
 
 #  -- Momentum space, real time --
-    # BLAS.set_num_threads(1)
+    BLAS.set_num_threads(1)
     
-    # filename = @sprintf(
-    #     "./HC_data/Chi_%.i%.i_DM%.2f_Ox%s_Oy%s_Q%.i%.i_GS_psi%.i_Time%.i_xx.csv",
-    #     N, M, DMI, Ox, Oy, k1, k2,
-    #     Int(log10(psi_cutoff)), dtau*Tsteps 
-    # )
+    filename = @sprintf(
+        "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_Q%.i%.i_GS_psi%.i_Time%.i_xx.csv",
+        N, M, Jnnn, DMI, Ox, Oy, k1, k2,
+        Int(log10(psi_cutoff)), dtau*Tsteps 
+    )
 
-    # O1, O2 = "Sx", "Sx"
-    # chi = chi_t(O1, O2, Q, r, H, psi0, sites, Tsteps, dtau, filename; 
-    #     cutoff=time_cutoff, maxdim=maxdim, ns=tausweep
-    # )
+    chi = chi_t(O1, O2, Q, r, H, E0, psi0, sites, Tsteps, dtau, filename; 
+        cutoff=time_cutoff, maxdim=maxdim, ns=tausweep
+    )
 
 # --- finite T ---
 
@@ -147,12 +141,12 @@ let
 #  -- k space, real time --
     # BLAS.set_num_threads(1)
     
-    filename = @sprintf(
-        "./HC_data/Chi_%.i%.i_DM%.2f_Ox%s_Oy%s_Q%.i%.i_beta%.2f_psi%.i_Time%.i_%s.csv",
-        N, M, DMI, Ox, Oy, k1, k2, beta, 
-        Int(log10(psi_cutoff)), dtau*Tsteps, operators
-    )
-    println(filename)
+    # filename = @sprintf(
+    #     "./HC_data/Chi_%.i%.i_DM%.2f_Ox%s_Oy%s_Q%.i%.i_beta%.2f_psi%.i_Time%.i_%s.csv",
+    #     N, M, DMI, Ox, Oy, k1, k2, beta, 
+    #     Int(log10(psi_cutoff)), dtau*Tsteps, operators
+    # )
+    # println(filename)
 
     # chi = chi_t_FT(O1, O2, Q, r, H, psi_beta, sites, Tsteps, dtau, filename; 
     #     cutoff=time_cutoff, maxdim=maxdim, ns=tausweep

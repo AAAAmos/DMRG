@@ -52,22 +52,24 @@ def build_basis(n, s):
 
 def build_HC_basis(m, n):
 
-  ### compute basis
-  m_2 = m*2
-  N = m_2*n
-  print("constructed hexagonal lattice with {0:d} sites.\n".format(N))
+    ### compute basis
+    m_2 = m*2
+    N = m_2*n
+    print("constructed hexagonal lattice with {0:d} sites.\n".format(N))
 
-  basis = spin_basis_general(N, S = "1/2", pauli = 0)
-  print("Hilbert space size: {0:d}.\n".format(basis.Ns))
+    basis = spin_basis_general(N, S = "1/2", pauli = 0)
+    print("Hilbert space size: {0:d}.\n".format(basis.Ns))
+    
+    r = []
   
-  r = []
+    for i in range(n):
+        for j in range(m):
+            # r.append([(3*i + 2)/2, 3**0.5*(-i/2 + j) ])
+            # r.append([(3*i + 1)/2, 3**0.5*(-i/2 + j + 0.5)])
+            r.append([i*3**0.5 + j*3**0.5/2, 1.5*j])
+            r.append([i*3**0.5 + j*3**0.5/2 + i*3**0.5/2, 1.5*j + 0.5])
   
-  for i in range(n):
-    for j in range(m):
-      r.append([(3*i + 2)/2, 3**0.5*(-i/2 + j) ])
-      r.append([(3*i + 1)/2, 3**0.5*(-i/2 + j + 0.5)])
-  
-  return basis, r
+    return basis, r
 
 def H_BLBQ(N, theta, basis, obc=False):
 
@@ -123,7 +125,6 @@ def H_BLBQ(N, theta, basis, obc=False):
     H = hamiltonian(static, dynamic, basis=basis, dtype=np.float64)
     return H
 
-
 def H_heisenburg(N, g, basis, obc=False):
 
     #### set up Heisenberg Hamiltonian with quspin #####
@@ -133,15 +134,19 @@ def H_heisenburg(N, g, basis, obc=False):
 
     zz, pn, z = [], [], []
     
-    if obc: n = N - 1
-    else: n = N
     
-    for i in range(n):
+    for i in range(N):
+        z.append([-g, i])
+        
         j = (i+1)%N
-    
-        zz.append([J1, i, j])
-        pn.append([J1/2, i, j])
-        z.append([g, i])
+        
+        if obc & (i+1>N): O_ = 0
+        else: O_ = 1
+        
+        zz.append([-J1*O_, i, j])
+        pn.append([-J1*O_/2, i, j])
+        # print(f'{i} {j}')
+        
   
     # define spin-spin interaction lists 
     static = [["+-", pn], ["-+", pn], ["zz", zz], ["z", z]]
@@ -150,7 +155,6 @@ def H_heisenburg(N, g, basis, obc=False):
     ### construct Hamiltonian
     H = hamiltonian(static, dynamic, basis=basis, dtype=np.float64)
     return H
-
 
 def H_HC(m, n, Jxy, Jz, J_nnn, J_dmi, h, basis):
 
@@ -303,7 +307,7 @@ def dsf_exact(A, B, H, w, beta):
     results_T0 = np.zeros(len(w), dtype=np.complex128)
     M_expect = np.zeros(len(beta), dtype=np.complex128)
     
-    M_expect[:] = np.einsum('bi,ij,ji->b', p, pIp, pBp)
+    M_expect[:] = np.einsum('bi,ij,ji->b', p, pIp, pBp)/Z
     
     for k in range(len(w)):
         
