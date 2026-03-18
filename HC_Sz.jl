@@ -6,29 +6,35 @@ using LinearAlgebra: BLAS
 using JLD2
 include("DSF_hc.jl")
 
-let 
+let     
     Total_time = time()
 
 #  -- Physical parameter setup ---
     N = 3
-    M = 5
-    Jnn, Jnnn, DMI, h = 1, 0., 0.0, 0.1
+    M = 6
+    Jnn, Jnnn, DMI, h = 1, 0.1, 0.1, 0.1
+    ani = 0.
 
     obc_x = false 
     obc_y = false
     Ox, Oy = "f", "f"
 
+    # Spin Check: Filename trivial_state
+
 #  -- Temperature --
     # beta_list = [0, 0.4, 0.5, 0.6, 0.7, 1, 1.3, 2, 3, 4, 5, 7, 10]
-    beta_list = [0, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1, 1.1, 1.3, 1.6, 2, 2.5, 3, 4, 5, 7]
-    save_list = [0.4, 0.5, 0.8, 1]
+    beta_list = [0, 0.3, 0.4, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 1, 1.1,
+     1.2, 1.4, 1.7, 2, 2.2, 2.4, 2.7, 3, 3.4, 4, 5, 7]
+    # beta_list = [0, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1, 1.1, 1.3, 1.6, 2, 2.5, 3, 4, 5, 7]
+    # save_list = [0.4, 0.5, 0.8, 1]
+    save_list = []
     d_beta = 0.01
 
 #  -- numerical setup ---
     dmrg_linkdim = 10
     dmrg_maxdim = [200, 200, 200, 200, 200]
-    maxdim = 100
-    QN_conservation = false
+    maxdim = 8
+    QN_conservation = true
 
 #  -- evolution accuracy --
     psi_cutoff = 1E-8
@@ -36,12 +42,12 @@ let
     
 #  -- files --
     E_file = @sprintf(
-        "./HC_data/%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_psi%.i_db%.2f_QNt_k%.i.csv",
+        "./HC_data/%.i%.i_S0.5_nnn%.2f_DM%.2f_Ox%s_Oy%s_psi%.i_db%.2f_QNt_k%.i.csv",
         N, M, Jnnn, DMI, Ox, Oy, Int(log10(psi_cutoff)), d_beta, maxdim
     )
 
     write_when_maxdim_exceeds = 20
-    write_path = "./"
+    write_path = "/home/amos1/tensornetwork/"
 
 # --- T=0 ---
 
@@ -61,9 +67,19 @@ let
     # mean_sz = mean(expect(psi0, "Sz"))
 
     open(E_file, "w") do io 
-        write(io, "beta,E,Sz,M2,dim\n")
-        # d = @sprintf("%.i,%.10f,%.5f,%.i\n", 100000, E0, mean_sz, maxlinkdim(psi0))
-        # write(io, d)
+        if obc_y 
+            # Sz profile
+            write(io, "beta,E,Sz,M2,dim")
+            for i in 1:M 
+                write(io, ",Sz$i")
+            end
+            write(io, "\n")
+        else
+            # Mean Sz
+            write(io, "beta,E,Sz,M2,dim\n")
+            # d = @sprintf("%.i,%.10f,%.5f,%.i\n", 100000, E0, mean_sz, maxlinkdim(psi0))
+            # write(io, d)
+        end
     end
 
     # Psi_file = @sprintf(
@@ -82,9 +98,11 @@ let
 # --- finite T ---
     
 #  -- aucillary states --
-    psi_beta, sites = trivial_state(N*M*2*2, QN=QN_conservation) # |psi(beta=0)>
-    H, r = H_HC(N, M, Jnn, Jnnn, DMI, h; auc=true)
+    psi_beta, sites = trivial_state(SpinHalf(), N*M*2*2, QN=QN_conservation) # |psi(beta=0)>
+    H, r = H_HC(N, M, Jnn, Jnnn, DMI, h, ani; auc=true, obc_x, obc_y)
     H = MPO(H, sites)
+    M1OP = MPO(M1_op(N*M*2), sites)
+    M2OP = MPO(M2_op(N*M*2), sites)
 
     for i in 1:length(beta_list)-1
 
@@ -109,7 +127,7 @@ let
         psi_beta = tdvp(
             H, -b/2, psi_beta; 
             nsweeps=nsweeps, maxdim=maxdim, normalize=true, nsite=nsites, cutoff=psi_cutoff
-            , outputlevel=1#, write_when_maxdim_exceeds , write_path
+            , outputlevel=1#, write_when_maxdim_exceeds #, write_path
         )
         println("Process peak RSS (MB): ", Sys.maxrss()/1.04E6)
         println("Cooldown fin.")
@@ -130,24 +148,33 @@ let
         # end
 
 #   - Mz, Purity, E -
-        M1OP = MPO(M1_op(N*M*2), sites)
-        Mz = complex(0.0, 0.0)
-        Mz += inner(psi_beta', M1OP, psi_beta)
-
-        M2OP = MPO(M2_op(N*M*2), sites)
-        M2 = complex(0.0, 0.0)
-        M2 += inner(psi_beta', M2OP, psi_beta)
+        Mz = inner(psi_beta', M1OP, psi_beta)
+        M2 = inner(psi_beta', M2OP, psi_beta)
+        E_beta = inner(psi_beta', H, psi_beta; cutoff=psi_cutoff)
 
         dim = maxlinkdim(psi_beta)
 
-        psi_h = apply(H, psi_beta; cutoff=psi_cutoff)
-        E_beta = complex(0.0, 0.0)
-        E_beta += inner(psi_beta, psi_h)
-
-        open(E_file, "a") do io 
-            d = @sprintf("%.4f,%.10f,%.10f,%.10f,%.i\n", beta, E_beta.re, Mz, M2, dim)
-            write(io, d)
+        open(E_file, "a") do io
+            if obc_y 
+                # Sz profile
+                Sz_i = expect(psi_beta, "Sz"; sites=1:M)
+                
+                d = @sprintf("%.4f,%.10f,%.10f,%.10f,%.i", beta, real(E_beta), real(Mz), real(M2), dim)
+                write(io, d)
+            
+                for i in 1:M 
+                    d = @sprintf(",%.6f", real(Sz_i[i]))
+                    write(io, d)
+                end
+                write(io, "\n")
+                
+            else
+                d = @sprintf("%.4f,%.10f,%.10f,%.10f,%.i\n", beta, real(E_beta), real(Mz), real(M2), dim)
+                write(io, d)
+            end
         end
+
+        GC.gc()
     end
 
     println("Total computational time: $(time()-Total_time)")

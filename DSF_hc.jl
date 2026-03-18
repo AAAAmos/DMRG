@@ -2,11 +2,14 @@ using ITensors
 using ITensorMPS
 using LinearAlgebra: svd, dot
 
+struct SpinHalf end 
+struct SpinOne end 
+
 function res(x, M) # same as % in python
     return mod(x-1, M)+1
 end
 
-function H_HC(n, m, J, j, D, h; auc=false, obc_x=false, obc_y=false)
+function H_HC(n, m, J, j, D, h, ani; auc=false, obc_x=false, obc_y=false)
 
     col = m*2
     N = n*col 
@@ -40,6 +43,10 @@ function H_HC(n, m, J, j, D, h; auc=false, obc_x=false, obc_y=false)
             # Zeeman
             os .+= -h, "Sz", ii 
             os .+= -h, "Sz", ii+1*X
+            
+            # anisotropic
+            os .+= -ani, "Sz", ii, "Sz", ii 
+            os .+= -ani, "Sz", ii+1*X, "Sz", ii+1*X
 
             # A site NN
             os .+= -J/2, "Sz", ii, "Sz", ii+1*X
@@ -50,45 +57,53 @@ function H_HC(n, m, J, j, D, h; auc=false, obc_x=false, obc_y=false)
             os .+= -J*O_/2, "Sz", ii, "Sz", (col*a+res(y-1, col))*X
             os .+= -J*O_/4, "S+", ii, "S-", (col*a+res(y-1, col))*X
             os .+= -J*O_/4, "S-", ii, "S+", (col*a+res(y-1, col))*X
+            # println("a NN", i, ": ", col*a+res(y-1, col), " O: ", O_)
 
-            O_ = (obc_x && i+1-col<0) ? 0 : 1
+            O_ = (obc_x && i+1-col<=0) ? 0 : 1
             os .+= -J*O_/2, "Sz", ii, "Sz", res(i+1-col, N)*X
             os .+= -J*O_/4, "S+", ii, "S-", res(i+1-col, N)*X
             os .+= -J*O_/4, "S-", ii, "S+", res(i+1-col, N)*X
+            # println("a NN", i, ": ", res(i+1-col, N), " O: ", O_)
             # println("a NN", i, ": ", i+1, col*a+res(y-1, col), res(i+1-col, N))
 
             # NNN
             O_ = (obc_y && y+2>col) ? 0 : 1
             os .+= -j*O_/2, "Sz", ii, "Sz", (col*a+res(y+2, col))*X
-            os .+= (-j/4 + im*D/2)*O_, "S+", ii, "S-", (col*a+res(y+2, col))*X
-            os .+= (-j/4 - im*D/2)*O_, "S-", ii, "S+", (col*a+res(y+2, col))*X
+            os .+= (-j + im*D)*O_/4, "S+", ii, "S-", (col*a+res(y+2, col))*X
+            os .+= (-j - im*D)*O_/4, "S-", ii, "S+", (col*a+res(y+2, col))*X
+            # println("a NNN", ii, ": ", col*a+res(y+2, col), " O: ", O_)
 
             O_ = (obc_y && y-2<0) ? 0 : 1
             os .+= -j*O_/2, "Sz", ii, "Sz", (col*a+res(y-2, col))*X
-            os .+= (-j/4 - im*D/2)*O_, "S+", ii, "S-", (col*a+res(y-2, col))*X
-            os .+= (-j/4 + im*D/2)*O_, "S-", ii, "S+", (col*a+res(y-2, col))*X
+            os .+= (-j - im*D)*O_/4, "S+", ii, "S-", (col*a+res(y-2, col))*X
+            os .+= (-j + im*D)*O_/4, "S-", ii, "S+", (col*a+res(y-2, col))*X
+            # println("a NNN", ii, ": ", col*a+res(y-2, col), " O: ", O_)
             
             O_ = (obc_x && i-col<0) ? 0 : 1
             os .+= -j*O_/2, "Sz", ii, "Sz", res(i-col, N)*X
-            os .+= (-j/4 + im*D/2)*O_, "S+", ii, "S-", res(i-col, N)*X
-            os .+= (-j/4 - im*D/2)*O_, "S-", ii, "S+", res(i-col, N)*X
+            os .+= (-j + im*D)*O_/4, "S+", ii, "S-", res(i-col, N)*X
+            os .+= (-j - im*D)*O_/4, "S-", ii, "S+", res(i-col, N)*X
+            # println("a NNN", ii, ": ",  res(i-col, N), " O: ", O_)
             
             O_ = (obc_x && i+col>N) ? 0 : 1
             os .+= -j*O_/2, "Sz", ii, "Sz", res(i+col, N)*X
-            os .+= (-j/4 - im*D/2)*O_, "S+", ii, "S-", res(i+col, N)*X
-            os .+= (-j/4 + im*D/2)*O_, "S-", ii, "S+", res(i+col, N)*X
+            os .+= (-j - im*D)*O_/4, "S+", ii, "S-", res(i+col, N)*X
+            os .+= (-j + im*D)*O_/4, "S-", ii, "S+", res(i+col, N)*X
+            # println("a NNN", ii, ": ",  res(i+col, N), " O: ", O_)
 
             O_x = (obc_x && a==n-1) ? 0 : 1
             O_y = (obc_y && y-2<0) ? 0 : 1
             os .+= (-j/2)*O_x*O_y, "Sz", ii, "Sz", res(col*(a+1)+res(y-2, col), N)*X
-            os .+= (-j/4 + im*D/2)*O_x*O_y, "S+", ii, "S-", res(col*(a+1)+res(y-2, col), N)*X
-            os .+= (-j/4 - im*D/2)*O_x*O_y, "S-", ii, "S+", res(col*(a+1)+res(y-2, col), N)*X
+            os .+= (-j + im*D)*O_x*O_y/4, "S+", ii, "S-", res(col*(a+1)+res(y-2, col), N)*X
+            os .+= (-j - im*D)*O_x*O_y/4, "S-", ii, "S+", res(col*(a+1)+res(y-2, col), N)*X
+            # println("a NNN", ii, ": ", res(col*(a+1)+res(y-2, col), N), " O: ", O_x, O_y)
 
             O_x = (obc_x && a==0) ? 0 : 1
             O_y = (obc_y && y+2>col) ? 0 : 1
             os .+= (-j/2)*O_x*O_y, "Sz", ii, "Sz", res(col*(a-1)+res(y+2, col), N)*X
-            os .+= (-j/4 - im*D/2)*O_x*O_y, "S+", ii, "S-", res(col*(a-1)+res(y+2, col), N)*X
-            os .+= (-j/4 + im*D/2)*O_x*O_y, "S-", ii, "S+", res(col*(a-1)+res(y+2, col), N)*X
+            os .+= (-j - im*D)*O_x*O_y/4, "S+", ii, "S-", res(col*(a-1)+res(y+2, col), N)*X
+            os .+= (-j + im*D)*O_x*O_y/4, "S-", ii, "S+", res(col*(a-1)+res(y+2, col), N)*X
+            # println("a NNN", ii, ": ", res(col*(a-1)+res(y+2, col), N), " O: ", O_x, O_y)
             # println("a NNN", ii, ": ", col*a+res(y+2, col), res(i-col, N), res(col*(a+1)+res(y-2, col), N))
 
             # B index
@@ -105,45 +120,53 @@ function H_HC(n, m, J, j, D, h; auc=false, obc_x=false, obc_y=false)
             os .+= -J*O_/2, "Sz", ii, "Sz", (col*a+res(y+1, col))*X
             os .+= -J*O_/4, "S+", ii, "S-", (col*a+res(y+1, col))*X
             os .+= -J*O_/4, "S-", ii, "S+", (col*a+res(y+1, col))*X
+            # println("b NN", i, ": ", col*a+res(y+1, col), " O: ", O_)
 
             O_ = (obc_x && i-1+col>N) ? 0 : 1
             os .+= -J*O_/2, "Sz", ii, "Sz", res(i-1+col, N)*X
             os .+= -J*O_/4, "S+", ii, "S-", res(i-1+col, N)*X
             os .+= -J*O_/4, "S-", ii, "S+", res(i-1+col, N)*X
+            # println("b NN", i, ": ", res(i-1+col, N), " O: ", O_)
             # println("b NN", i, ": ", i-1, col*a+res(y+1, col), res(i-1+col, N))
 
             # NNN
             O_ = (obc_y && y-2<0) ? 0 : 1
             os .+= (-j/2)*O_, "Sz", ii, "Sz", (col*a+res(y-2, col))*X
-            os .+= (-j/4 + im*D/2)*O_, "S+", ii, "S-", (col*a+res(y-2, col))*X
-            os .+= (-j/4 - im*D/2)*O_, "S-", ii, "S+", (col*a+res(y-2, col))*X
+            os .+= (-j + im*D)*O_/4, "S+", ii, "S-", (col*a+res(y-2, col))*X
+            os .+= (-j - im*D)*O_/4, "S-", ii, "S+", (col*a+res(y-2, col))*X
+            # println("b NNN", i, ": ", col*a+res(y-2, col), " O: ", O_)
             
             O_ = (obc_y && y+2>col) ? 0 : 1
             os .+= (-j/2)*O_, "Sz", ii, "Sz", (col*a+res(y+2, col))*X
-            os .+= (-j/4 - im*D/2)*O_, "S+", ii, "S-", (col*a+res(y+2, col))*X
-            os .+= (-j/4 + im*D/2)*O_, "S-", ii, "S+", (col*a+res(y+2, col))*X
+            os .+= (-j - im*D)*O_/4, "S+", ii, "S-", (col*a+res(y+2, col))*X
+            os .+= (-j + im*D)*O_/4, "S-", ii, "S+", (col*a+res(y+2, col))*X
+            # println("b NNN", i, ": ", col*a+res(y+2, col), " O: ", O_)
             
-            O_ = (obc_x && i+col<N) ? 0 : 1
+            O_ = (obc_x && i+col>N) ? 0 : 1
             os .+= (-j/2)*O_, "Sz", ii, "Sz", res(i+col, N)*X
-            os .+= (-j/4 + im*D/2)*O_, "S+", ii, "S-", res(i+col, N)*X
-            os .+= (-j/4 - im*D/2)*O_, "S-", ii, "S+", res(i+col, N)*X
+            os .+= (-j + im*D)*O_/4, "S+", ii, "S-", res(i+col, N)*X
+            os .+= (-j - im*D)*O_/4, "S-", ii, "S+", res(i+col, N)*X
+            # println("b NNN", i, ": ", res(i+col, N), " O: ", O_)
             
-            O_ = (obc_x && i-col<0) ? 0 : 1
+            O_ = (obc_x && i-col<=0) ? 0 : 1
             os .+= (-j/2)*O_, "Sz", ii, "Sz", res(i-col, N)*X
-            os .+= (-j/4 - im*D/2)*O_, "S+", ii, "S-", res(i-col, N)*X
-            os .+= (-j/4 + im*D/2)*O_, "S-", ii, "S+", res(i-col, N)*X
+            os .+= (-j - im*D)*O_/4, "S+", ii, "S-", res(i-col, N)*X
+            os .+= (-j + im*D)*O_/4, "S-", ii, "S+", res(i-col, N)*X
+            # println("b NNN", i, ": ", res(i-col, N), " O: ", O_)
 
             O_x = (obc_x && a==0) ? 0 : 1
             O_y = (obc_y && y+2>col) ? 0 : 1
             os .+= (-j/2)*O_x*O_y, "Sz", ii, "Sz", res(col*(a-1)+res(y+2, col), N)*X
-            os .+= (-j/4 + im*D/2)*O_x*O_y, "S+", ii, "S-", res(col*(a-1)+res(y+2, col), N)*X
-            os .+= (-j/4 - im*D/2)*O_x*O_y, "S-", ii, "S+", res(col*(a-1)+res(y+2, col), N)*X
+            os .+= (-j + im*D)*O_x*O_y/4, "S+", ii, "S-", res(col*(a-1)+res(y+2, col), N)*X
+            os .+= (-j - im*D)*O_x*O_y/4, "S-", ii, "S+", res(col*(a-1)+res(y+2, col), N)*X
+            # println("a NNN", ii, ": ", res(col*(a-1)+res(y+2, col), N), " O: ", O_x, O_y)
             
             O_x = (obc_x && a==n-1) ? 0 : 1
             O_y = (obc_y && y-2<0) ? 0 : 1
             os .+= (-j/2)*O_x*O_y, "Sz", ii, "Sz", res(col*(a+1)+res(y-2, col), N)*X
-            os .+= (-j/4 - im*D/2)*O_x*O_y, "S+", ii, "S-", res(col*(a+1)+res(y-2, col), N)*X
-            os .+= (-j/4 + im*D/2)*O_x*O_y, "S-", ii, "S+", res(col*(a+1)+res(y-2, col), N)*X
+            os .+= (-j - im*D)*O_x*O_y/4, "S+", ii, "S-", res(col*(a+1)+res(y-2, col), N)*X
+            os .+= (-j + im*D)*O_x*O_y/4, "S-", ii, "S+", res(col*(a+1)+res(y-2, col), N)*X
+            # println("a NNN", ii, ": ", res(col*(a+1)+res(y-2, col), N), " O: ", O_x, O_y)
             # println("b NNN", i, ": ", col*a+res(y-2, col), res(i+col, N), res(col*(a-1)+res(y+2, col), N))
 
         end
@@ -173,7 +196,7 @@ function M2_op(N)
     return os
 end
 
-function trivial_state(N; QN=false)
+function trivial_state(::SpinHalf, N; QN=false)
 
     sites = siteinds("S=1/2", N; conserve_qns=QN, qnname_sz="TotalSz")
 
@@ -200,7 +223,35 @@ function trivial_state(N; QN=false)
     psi = apply(gates, psi; cutoff=1e-10)
     psi = noprime(psi)
 
-    println("EPR state fin.")
+    println("Spin Half EPR state fin.")
+    return psi, sites
+end
+
+function trivial_state(::SpinOne, N; QN=false)
+
+    sites = siteinds("S=1", N; conserve_qns=QN, qnname_sz="TotalSz")
+
+    states = [isodd(n) ? "Up" : "Dn" for n in 1:N]
+    psi = MPS(Float64, sites, states)
+
+    gates = ITensor[]
+    for j in 1:2:N-1
+        s1 = siteind(psi, j)
+        s2 = siteind(psi, j+1)
+        
+        # Create an operator tensor with 4 indices: (s1, s2) and (s1', s2')
+        g = ITensor(dag(s1), dag(s2), s1', s2')
+        g[s1=>"Up", s2=>"Dn", s1'=>"Up", s2'=>"Dn"] = 1.0 / sqrt(3)
+        g[s1=>"Up", s2=>"Dn", s1'=>"Dn", s2'=>"Up"] = 1.0 / sqrt(3)
+        g[s1=>"Up", s2=>"Dn", s1'=>"Z0", s2'=>"Z0"] = 1.0 / sqrt(3)
+
+        push!(gates, g)
+    end
+
+    psi = apply(gates, psi; cutoff=1e-10)
+    psi = noprime(psi)
+
+    println("Spin 1 EPR state fin.")
     return psi, sites
 end
 
