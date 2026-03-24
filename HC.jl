@@ -106,9 +106,16 @@ let
 #  -- Momentum space, real time --
     BLAS.set_num_threads(1)
     
+    # PBC
+    # filename = @sprintf(
+    #     "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_AB00_Q%.i%.i_GS_psi%.i_Time%.i_k%.i_%s.csv",
+    #     N, M, Jnnn, DMI, Ox, Oy, k1, k2,
+    #     Int(log10(psi_cutoff)), dtau*Tsteps, maxdim, operators
+    # )
+    # OBC
     filename = @sprintf(
-        "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_AB00_Q%.i%.i_GS_psi%.i_Time%.i_k%.i_%s.csv",
-        N, M, Jnnn, DMI, Ox, Oy, k1, k2,
+        "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_AB00_K+_GS_psi%.i_Time%.i_k%.i_%s.csv",
+        N, M, Jnnn, DMI, Ox, Oy, 
         Int(log10(psi_cutoff)), dtau*Tsteps, maxdim, operators
     )
 

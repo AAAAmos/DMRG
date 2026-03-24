@@ -283,7 +283,7 @@ function chi_t(O1, O2, Q, r, H, E0, psi0, sites, Tsteps, dt, filename; cutoff=1e
     end
 
     # prepare for time evolution
-    psi_SA_t, psi_SB_t = copy(psi_Bprime), copy(psi_Bprime)
+    psi_SA_t, psi_SB_t = copy(psi_Aprime), copy(psi_Bprime)
     psi_Aprime, psi_Bprime = nothing, nothing
 
     # write data
