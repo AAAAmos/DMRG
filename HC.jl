@@ -12,14 +12,14 @@ let
     Total_time = time()
 
 #  -- Physical parameter setup ---
-    N = 2
-    M = 2
-    Jnn, Jnnn, DMI, h = 1, 0.1, 0.0, 0.1
+    N = 3
+    M = 7
+    Jnn, Jnnn, DMI, h = 1, 0.1, 0.2, 0.1
     ani = 0.
 
     obc_x = false 
-    obc_y = false
-    Ox, Oy = "f", "f"
+    obc_y = true
+    Ox, Oy = "f", "t"
 
     O1, O2 = "S+", "S-"
     operators = "+-"
@@ -35,17 +35,22 @@ let
         K-: [1, 2]/3
         M: [1, 1]/2
     =#
-    k1, k2 = 1, 1
+    # k1, k2 = 2, 2
+    # Q = 2*pi*(
+    #     k1/N * [1/√(3), -1/3] + 
+    #     k2/M * [0, 2/3]
+    # )
+
     Q = 2*pi*(
-        k1/N * [1/√(3), -1/3] + 
-        k2/M * [0, 2/3]
+        2/3 * [1/√(3), -1/3] + 
+        1/3 * [0, 2/3]
     )
 
 #  -- numerical setup ---
     dmrg_sw = 5
     dmrg_linkdim = 256
     dmrg_maxdim = ones(Int, dmrg_sw) * dmrg_linkdim
-    maxdim = 20
+    maxdim = 10
 
 #  -- evolution accuracy --
     psi_cutoff = 1E-10
@@ -75,33 +80,49 @@ let
 
 #  -- Real space, real time --
     # BLAS.set_num_threads(1)
-    
+
     # S1, S2 = 1, 1
 
     # filename = @sprintf(
-    #     "./HC_data/Chi_%.i%.i_nnn0.0_DM%.2f_Ox%s_Oy%s_S%.iS%.i_GS_psi%.i_Time%.i_pm.csv",
-    #     N, M, DMI, Ox, Oy, S1, S2,
-    #     Int(log10(psi_cutoff)), dtau*Tsteps 
+    #     "./HC_data/T2_test/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_S%.iS%.i_GS_psi%.i_dT%.2f_k%.i_%s_2T_expand.csv",
+    #     N, M, Jnnn, DMI, Ox, Oy, S1, S2,
+    #     Int(log10(psi_cutoff)), dtau, maxdim, operators
     # )
     # println(filename)
 
-    # O1, O2 = "S+", "S-"
-    # chi = chi_x_t(O1, O2, S1, S2, H, E0, psi0, sites, Tsteps, dtau, filename; 
+    # chi = chi_x_2t(O1, O2, S1, S2, H, E0, psi0, sites, Tsteps, dtau, filename; 
     #     cutoff=time_cutoff, maxdim=maxdim, ns=tausweep
     # )
+
+    # open(filename, "w") do io 
+    #     write(io, "t,RS,IS\n")
+    #     for t in -Tsteps:Tsteps
+    #         i = t + Tsteps+1
+    #         d = @sprintf("%.2f,%.10f,%.10f\n", t*dtau, chi[i].re, chi[i].im)
+    #         write(io, d)
+    #     end
+    # end
 
 #  -- Momentum space, real time --
     BLAS.set_num_threads(1)
     
     filename = @sprintf(
-        "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_Q%.i%.i_GS_psi%.i_Time%.i_xx.csv",
+        "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_AB00_Q%.i%.i_GS_psi%.i_Time%.i_k%.i_%s.csv",
         N, M, Jnnn, DMI, Ox, Oy, k1, k2,
-        Int(log10(psi_cutoff)), dtau*Tsteps 
+        Int(log10(psi_cutoff)), dtau*Tsteps, maxdim, operators
     )
 
     chi = chi_t(O1, O2, Q, r, H, E0, psi0, sites, Tsteps, dtau, filename; 
-        cutoff=time_cutoff, maxdim=maxdim, ns=tausweep
+        cutoff=time_cutoff, maxdim=maxdim, ns=tausweep, phi_t=false
     )
+    # open(filename, "w") do io 
+    #     write(io, "t,RS,IS\n")
+    #     for t in -Tsteps:Tsteps
+    #         i = t + Tsteps+1
+    #         d = @sprintf("%.2f,%.10f,%.10f\n", t*dtau, chi[i].re, chi[i].im)
+    #         write(io, d)
+    #     end
+    # end
 
 # --- finite T ---
 
