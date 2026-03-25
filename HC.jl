@@ -24,6 +24,8 @@ let
     O1, O2 = "S+", "S-"
     operators = "+-"
 
+    centerA, centerB = 1, 2
+
 #  -- Temperature --
     beta = 1/1
     # !!! FT 3 threads
@@ -35,16 +37,18 @@ let
         K-: [1, 2]/3
         M: [1, 1]/2
     =#
-    # k1, k2 = 2, 2
+    # k1, k2 = 2, 1
     # Q = 2*pi*(
     #     k1/N * [1/√(3), -1/3] + 
     #     k2/M * [0, 2/3]
     # )
+    # Q_text = "Q$k1$k2"
 
     Q = 2*pi*(
         2/3 * [1/√(3), -1/3] + 
         1/3 * [0, 2/3]
     )
+    Q_text = "K+"
 
 #  -- numerical setup ---
     dmrg_sw = 5
@@ -60,7 +64,7 @@ let
 #  -- Time step --
     dtau = 0.05
     tausweep = 1
-    Tsteps = 600
+    Tsteps = 600*2
 
 # --- T=0 ---
 
@@ -105,22 +109,15 @@ let
 
 #  -- Momentum space, real time --
     BLAS.set_num_threads(1)
-    
-    # PBC
-    # filename = @sprintf(
-    #     "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_AB00_Q%.i%.i_GS_psi%.i_Time%.i_k%.i_%s.csv",
-    #     N, M, Jnnn, DMI, Ox, Oy, k1, k2,
-    #     Int(log10(psi_cutoff)), dtau*Tsteps, maxdim, operators
-    # )
-    # OBC
+
     filename = @sprintf(
-        "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_AB00_K+_GS_psi%.i_Time%.i_k%.i_%s.csv",
-        N, M, Jnnn, DMI, Ox, Oy, 
+        "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_AB%.i%.i_%s_GS_psi%.i_Time%.i_k%.i_%s.csv",
+        N, M, Jnnn, DMI, Ox, Oy, centerA, centerB, Q_text, 
         Int(log10(psi_cutoff)), dtau*Tsteps, maxdim, operators
     )
 
     chi = chi_t(O1, O2, Q, r, H, E0, psi0, sites, Tsteps, dtau, filename; 
-        cutoff=time_cutoff, maxdim=maxdim, ns=tausweep, phi_t=false
+        cutoff=time_cutoff, maxdim=maxdim, ns=tausweep, phi_t=false, centerA, centerB
     )
     # open(filename, "w") do io 
     #     write(io, "t,RS,IS\n")

@@ -314,7 +314,6 @@ function chi_t(O1, O2, Q, r, H, E0, psi0, sites, Tsteps, dt, filename; cutoff=1e
         end
     end
 
-    ol = 1
     psi_SA_t = expand(psi_SA_t, H; 
         alg="global_krylov", krylovdim=3, cutoff=cutoff
     )
@@ -322,10 +321,12 @@ function chi_t(O1, O2, Q, r, H, E0, psi0, sites, Tsteps, dt, filename; cutoff=1e
         alg="global_krylov", krylovdim=3, cutoff=cutoff
     )
     nsitesA, nsitesB = 1, 1
+
     for t in 1:Tsteps
 
         t_start = time()
 
+        ol = (mod(t, 20) == 0) || (t<10) ? 1 : 0
         t1 = Threads.@spawn tdvp(H, -im*dt, psi_SA_t; 
             nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
             nsite=nsitesA, outputlevel=ol
@@ -673,7 +674,6 @@ function chi_t_FT(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-
 
     return chi
 end
-
 
 function chi_2t_FT(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1, phi_t=false)
     
