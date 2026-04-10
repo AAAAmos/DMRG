@@ -12,19 +12,20 @@ let
     Total_time = time()
 
 #  -- Physical parameter setup ---
-    N = 3
-    M = 7
+    N = 6
+    M = 6
     Jnn, Jnnn, DMI, h = 1, 0.1, 0.2, 0.1
     ani = 0.
 
     obc_x = false 
-    obc_y = true
-    Ox, Oy = "f", "t"
+    obc_y = false
+    Ox, Oy = "f", "f"
 
     O1, O2 = "S+", "S-"
     operators = "+-"
 
-    centerA, centerB = 1, 2
+    col_x = 4
+    centerA, centerB = 1+2*M*(col_x-1), 2+2*M*(col_x-1)
 
 #  -- Temperature --
     beta = 1/1
@@ -64,7 +65,7 @@ let
 #  -- Time step --
     dtau = 0.05
     tausweep = 1
-    Tsteps = 600*2
+    Tsteps = 600*4
 
 # --- T=0 ---
 
@@ -85,16 +86,16 @@ let
 #  -- Real space, real time --
     # BLAS.set_num_threads(1)
 
-    # S1, S2 = 1, 1
+    # S1, S2 = 1+28, 7+28
 
     # filename = @sprintf(
-    #     "./HC_data/T2_test/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_S%.iS%.i_GS_psi%.i_dT%.2f_k%.i_%s_2T_expand.csv",
+    #     "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_S%.iS%.i_GS_psi%.i_dT%.2f_k%.i_%s_2T_expand3.csv",
     #     N, M, Jnnn, DMI, Ox, Oy, S1, S2,
     #     Int(log10(psi_cutoff)), dtau, maxdim, operators
     # )
     # println(filename)
 
-    # chi = chi_x_2t(O1, O2, S1, S2, H, E0, psi0, sites, Tsteps, dtau, filename; 
+    # chi = chi_x_t(O1, O2, S1, S2, H, E0, psi0, sites, Tsteps, dtau, filename; 
     #     cutoff=time_cutoff, maxdim=maxdim, ns=tausweep
     # )
 
@@ -116,9 +117,10 @@ let
         Int(log10(psi_cutoff)), dtau*Tsteps, maxdim, operators
     )
 
-    chi = chi_t(O1, O2, Q, r, H, E0, psi0, sites, Tsteps, dtau, filename; 
+    chi = chi_t_old(O1, O2, Q, r, H, E0, psi0, sites, Tsteps, dtau, filename; 
         cutoff=time_cutoff, maxdim=maxdim, ns=tausweep, phi_t=false, centerA, centerB
     )
+
     # open(filename, "w") do io 
     #     write(io, "t,RS,IS\n")
     #     for t in -Tsteps:Tsteps
