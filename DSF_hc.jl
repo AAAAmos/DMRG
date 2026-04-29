@@ -511,12 +511,16 @@ function chi_t(O1, O2, Q_list, r, H, E0, psi0, sites, Tsteps, dt, filenames; cut
     return 1
 end
 
+function chi_t_scan(ox, oy, N, M, O1, O2, Q_list, r, H, E0, psi0, sites, Tsteps, dt, filenames; kwargs...)
+    return chi_t_scan(Val(ox), Val(oy), N, M, O1, O2, Q_list, r, H, E0, psi0, sites, Tsteps, dt, filenames; kwargs...)
+end
 
-function chi_t_px_oy(N, M, O1, O2, Q_list, r, H, E0, psi0, sites, Tsteps, dt, filenames; cutoff=1e-10, maxdim=20, ns=1, centerA=1, centerB=2, phi_t=false)
+function chi_t_scan(ox::Val{false}, oy::Val{true}, N, M, O1, O2, Q_list, r, H, E0, psi0, sites, Tsteps, dt, filenames; cutoff=1e-10, maxdim=20, ns=1, centerA=1, centerB=2, phi_t=false)
 
     M *= 2 # subsites
     Nk = length(Q_list)
 
+    println("PBC in x, OBC in y. Correlation slices in y direction!")
     println("Core A: ", centerA, "Core B: ", centerB)
     println(" ")
     psi_Aprime, psi_Bprime = copy(psi0), copy(psi0)
@@ -580,7 +584,7 @@ function chi_t_px_oy(N, M, O1, O2, Q_list, r, H, E0, psi0, sites, Tsteps, dt, fi
 
         t_start = time()
 
-        ol = (mod(t, 20) == 0) ? 1 : 0
+        ol = (mod(t, 20) == 1) ? 1 : 0
         t1 = Threads.@spawn tdvp(H, -im*dt, psi_SA_t; 
             nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
             nsite=nsitesA, outputlevel=ol
@@ -633,7 +637,144 @@ function chi_t_px_oy(N, M, O1, O2, Q_list, r, H, E0, psi0, sites, Tsteps, dt, fi
         end
 
 
-        if mod(t, 20) == 0
+        if mod(t, 20) == 1
+            println("T step: $(t), Chi($(t*dt)) finished.")
+            println(" ")
+            # println("Loop Time spent: $(time()-t_start)")
+            println("TDVP time = $(sum_time-t_start)")
+            println("Sum time = $(time()-sum_time)")
+            println("Process peak RSS (MB): ", Sys.maxrss()/1.04E6)
+        end
+
+    end
+
+    return 1
+end
+
+
+function chi_t_scan(ox::Val{true}, oy::Val{false}, N, M, O1, O2, Q_list, r, H, E0, psi0, sites, Tsteps, dt, filenames; cutoff=1e-10, maxdim=20, ns=1, centerA=1, centerB=2, phi_t=false)
+
+    M *= 2 # subsites
+    Nk = length(Q_list)
+
+    println("PBC in x, OBC in y. Correlation slices in y direction!")
+    println("Core A: ", centerA, "Core B: ", centerB)
+    println(" ")
+    psi_Aprime, psi_Bprime = copy(psi0), copy(psi0)
+    psi_Aprime[centerA] = noprime(op(O2, sites[centerA]) * psi0[centerA])
+    psi_Bprime[centerB] = noprime(op(O2, sites[centerB]) * psi0[centerB])
+
+    chi_t0 = zeros(ComplexF64, N, Nk)
+
+    # t = 0
+    for n = 1:N
+        for m = 1:M
+            j = m+(n-1)*M
+            psi_Sja_0 = copy(psi_Aprime)
+            psi_Sja_0[j] = noprime(op(O1, sites[j]) * psi_Sja_0[j])
+            psi_Sjb_0 = copy(psi_Bprime)
+            psi_Sjb_0[j] = noprime(op(O1, sites[j]) * psi_Sjb_0[j])
+
+            for q = 1:Nk
+                phaseK = dot(Q_list[q], (r[centerA]-r[j]))
+                chi_t0[n, q] += 0.5/√(N*M) * exp(-im * phaseK) * inner(psi0, psi_Sja_0)
+                phaseK = dot(Q_list[q], (r[centerB]-r[j]))
+                chi_t0[n, q] += 0.5/√(N*M) * exp(-im * phaseK) * inner(psi0, psi_Sjb_0)
+            end
+        end
+    end
+
+    # write data
+    for q = 1:Nk
+        open(filenames[q], "w") do io 
+            write(io, "t")
+            for n = 1:N 
+                write(io, ",RS$n,IS$n")
+            end
+            write(io, "\n")
+
+            d = @sprintf("%.2f", 0)
+            write(io, d)
+            for n = 1:N 
+                d = @sprintf(",%.10f,%.10f", chi_t0[n, q].re, chi_t0[n, q].im)
+                write(io, d)
+            end
+            write(io, "\n")
+        end
+    end
+
+
+    # prepare for time evolution
+    psi_SA_t, psi_SB_t = copy(psi_Aprime), copy(psi_Bprime)
+    psi_Aprime, psi_Bprime = nothing, nothing
+    psi_Sja_0, psi_Sjb_0 = nothing, nothing
+
+    psi_SA_t = expand(psi_SA_t, H; 
+        alg="global_krylov", krylovdim=3, cutoff=cutoff
+    )
+    psi_SB_t = expand(psi_SB_t, H; 
+        alg="global_krylov", krylovdim=3, cutoff=cutoff
+    )
+    nsitesA, nsitesB = 1, 1
+
+    for t in 1:Tsteps
+
+        t_start = time()
+
+        ol = (mod(t, 20) == 1) ? 1 : 0
+        t1 = Threads.@spawn tdvp(H, -im*dt, psi_SA_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
+            nsite=nsitesA, outputlevel=ol
+        )
+        t2 = Threads.@spawn tdvp(H, -im*dt, psi_SB_t; 
+            nsweeps=ns, maxdim=maxdim, normalize=false, cutoff=cutoff,
+            nsite=nsitesB, outputlevel=ol
+        )
+        psi_SA_t, psi_SB_t = (fetch(t1), fetch(t2))
+
+        bonddimA, bonddimB = maxlinkdim(psi_SA_t), maxlinkdim(psi_SB_t)
+        nsitesA = (bonddimA==maxdim) ? 1 : 2
+        nsitesB = (bonddimB==maxdim) ? 1 : 2
+
+        sum_time = time()
+
+        chi_t_p = zeros(ComplexF64, N, Nk)
+        # sum over sites
+        for n = 1:N
+            for m = 1:M 
+                j = m+(n-1)*M
+                C = 0.5/√(N*M) * exp(im * E0 * t*dt) # from U^\dagger (t)
+
+                psi_SA_t_Si = copy(psi_SA_t)
+                psi_SA_t_Si[j] = noprime(op(O1, sites[j]) * psi_SA_t_Si[j])
+                pAp = C * inner(psi0, psi_SA_t_Si)
+                psi_SB_t_Si = copy(psi_SB_t)
+                psi_SB_t_Si[j] = noprime(op(O1, sites[j]) * psi_SB_t_Si[j])
+                pBp = C * inner(psi0, psi_SB_t_Si)
+
+                for q = 1:Nk
+                    phaseK = dot(Q_list[q], (r[centerA]-r[j]))
+                    chi_t_p[n, q] += exp(-im * phaseK) * pAp
+                    phaseK = dot(Q_list[q], (r[centerB]-r[j]))
+                    chi_t_p[n, q] += exp(-im * phaseK) * pBp
+                end
+            end 
+        end
+
+        for q = 1:Nk
+            open(filenames[q], "a") do io 
+                d = @sprintf("%.2f", t*dt)
+                write(io, d)
+                for n = 1:N
+                    d = @sprintf(",%.10f,%.10f", chi_t_p[n, q].re, chi_t_p[n, q].im)
+                    write(io, d)
+                end
+                write(io, "\n")
+            end
+        end
+
+
+        if mod(t, 20) == 1
             println("T step: $(t), Chi($(t*dt)) finished.")
             println(" ")
             # println("Loop Time spent: $(time()-t_start)")
@@ -805,30 +946,34 @@ function chi_x_2t(O1, O2, Si, Sj, H, E0, psi0, sites, Tsteps, dt, filename; cuto
     return chi
 end
 
-function chi_t_FT(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1, phi_t=false, centerA=1, centerB=2)
+function chi_t_FT(O1, O2, Q_list, r, H, psi0, sites, Tsteps, dt, filenames; cutoff=1e-10, maxdim=20, ns=1, phi_t=false, centerA=2, centerB=4)
     
-    chi_p = zeros(ComplexF64, Tsteps) # store the chi(t)
-    println("Core A: ", centerA, "Core B: ", centerB)
+    Nk = length(Q_list)
 
     N = length(psi0)
-    psi_t = copy(psi0)
-    psi_Aprime, psi_Bprime = copy(psi0), copy(psi0)
+
+    psi_Aprime, psi_Bprime, psi_t = copy(psi0), copy(psi0), copy(psi0)
     psi_Aprime[centerA] = noprime(op(O2, sites[centerA]) * psi0[centerA])
     psi_Bprime[centerB] = noprime(op(O2, sites[centerB]) * psi0[centerB])
     
     # t = 0
-    chi_t0 = complex(0.0, 0.0)
+    chi_t0 = zeros(ComplexF64, Nk)
     for j = 2:2:N
-        psi_Sj_0 = copy(psi_Aprime)
-        psi_Sj_0[j] = noprime(op(O1, sites[j]) * psi_Sj_0[j])
-        phaseK = dot(Q, (r[centerA]-r[j]))
-        chi_t0 += 0.5/√(N/2) * exp(-im*phaseK) * inner(psi0, psi_Sj_0)
+        psi_Sja_0 = copy(psi_Aprime)
+        psi_Sja_0[j] = noprime(op(O1, sites[j]) * psi_Sja_0[j])
+        pAp = inner(psi0, psi_Sja_0)
+        psi_Sjb_0 = copy(psi_Bprime)
+        psi_Sjb_0[j] = noprime(op(O1, sites[j]) * psi_Sjb_0[j])
+        pBp = inner(psi0, psi_Sjb_0)
 
-        psi_Sj_0 = copy(psi_Bprime)
-        psi_Sj_0[j] = noprime(op(O1, sites[j]) * psi_Sj_0[j])
-        phaseK = dot(Q, (r[centerB]-r[j]))
-        chi_t0 += 0.5/√(N/2) * exp(-im*phaseK) * inner(psi0, psi_Sj_0)
+        for q = 1:Nk
+            phaseK = dot(Q_list[q], (r[centerA]-r[j]))
+            chi_t0[q] += 0.5/√(N/2) * exp(-im*phaseK) * pAp
+            phaseK = dot(Q_list[q], (r[centerB]-r[j]))
+            chi_t0[q] += 0.5/√(N/2) * exp(-im*phaseK) * pBp
+        end
     end
+    psi_Sja_0, psi_Sjb_0, pAp, pBp = nothing, nothing, nothing, nothing
 
     # prepare for time evolution
     psi_SA_t, psi_SB_t = copy(psi_Aprime), copy(psi_Bprime)
@@ -837,18 +982,39 @@ function chi_t_FT(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-
 
     # write data
     if phi_t
-        phi_amp = expect()
-        open(filename, "w") do io 
-            write(io, "t,RS,IS\n")
-            d = @sprintf("%.2f,%.10f,%.10f", 0, chi_t0.re, chi_t0.im)
-            write(io, d)
+        phiphi = expect(psi_t, "Sz")
+
+        for q = 1:Nk
+            open(filenames[q], "w") do io 
+                # header
+                write(io, "t,RS,IS")
+                for n in 1:N
+                    write(io, ",Sz$n")
+                end
+                write(io, "\n")
+                # Chi
+                d = @sprintf("%.2f,%.10f,%.10f", 0, chi_t0[q].re, chi_t0[q].im)
+                write(io, d)
+                # Sz_n
+                for n in 1:N
+                    d = @sprintf(",%.8f", phiphi[n])
+                    write(io, d)
+                end
+                write(io, "\n")
+            end
         end
+
     else
-        open(filename, "w") do io 
-            write(io, "t,RS,IS\n")
-            d = @sprintf("%.2f,%.10f,%.10f\n", 0, chi_t0.re, chi_t0.im)
-            write(io, d)
+        for q = 1:Nk
+            open(filenames[q], "w") do io 
+                # header
+                write(io, "t,RS,IS\n")
+                # Chi
+                d = @sprintf("%.2f,%.10f,%.10f\n", 0, chi_t0[q].re, chi_t0[q].im)
+                write(io, d)
+            end
         end
+
     end
 
     for t in 1:Tsteps
@@ -857,9 +1023,26 @@ function chi_t_FT(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-
         ol=1
         bonddimA, bonddimB, bonddimt = maxlinkdim(psi_SA_t), maxlinkdim(psi_SB_t), maxlinkdim(psi_t)
         
-        nsitesA = (bonddimA==maxdim) ? 1 : 2
-        nsitesB = (bonddimB==maxdim) ? 1 : 2
-        nsitest = (bonddimt==maxdim) ? 1 : 2
+        # nsitesA = (bonddimA==maxdim) ? 1 : 2
+        # nsitesB = (bonddimB==maxdim) ? 1 : 2
+        # nsitest = (bonddimt==maxdim) ? 1 : 2
+        nsitesA, nsitesB, nsitest = 1, 1, 1
+        
+        if bonddimA<maxdim
+            psi_SA_t = expand(psi_SA_t, H; 
+                alg="global_krylov", krylovdim=3, cutoff=cutoff
+            )
+        end
+        if bonddimB<maxdim
+            psi_SB_t = expand(psi_SB_t, H; 
+                alg="global_krylov", krylovdim=3, cutoff=cutoff
+            )
+        end
+        if bonddimt<maxdim
+            psi_t = expand(psi_t, H; 
+                alg="global_krylov", krylovdim=3, cutoff=cutoff
+            )
+        end
 
         t1 = Threads.@spawn tdvp(
             H, -im*dt, psi_SA_t; 
@@ -878,46 +1061,62 @@ function chi_t_FT(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-
         psi_SA_t, psi_SB_t, psi_t = (fetch(t1), fetch(t2), fetch(t3))
 
         println("TDVP Time spent: $(time()-t_start)")
+        t_sumi = time()
 
-        chi_t = complex(0.0, 0.0)
+        chi_t = zeros(ComplexF64, Nk)
         for j = 2:2:N
-            psi_Sc_t_Sj = copy(psi_SA_t)
-            psi_Sc_t_Sj[j] = noprime(op(O1, sites[j]) * psi_Sc_t_Sj[j])
+            psi_Sc_t_Sja = copy(psi_SA_t)
+            psi_Sc_t_Sja[j] = noprime(op(O1, sites[j]) * psi_Sc_t_Sja[j])
+            pAp = 0.5/√(N/2) * inner(psi_t, psi_Sc_t_Sja)
+            psi_Sc_t_Sjb = copy(psi_SB_t)
+            psi_Sc_t_Sjb[j] = noprime(op(O1, sites[j]) * psi_Sc_t_Sjb[j])
+            pBp = 0.5/√(N/2) * inner(psi_t, psi_Sc_t_Sjb)
 
-            phaseK = dot(Q, (r[centerA]-r[j]))
-            chi_t += 0.5/√(N/2) * exp(-im*phaseK) * inner(psi_t, psi_Sc_t_Sj)
+            for q = 1:Nk
+                phaseK = dot(Q_list[q], (r[centerA]-r[j]))
+                chi_t[q] += exp(-im*phaseK) * pAp
 
-            psi_Sc_t_Sj = copy(psi_SB_t)
-            psi_Sc_t_Sj[j] = noprime(op(O1, sites[j]) * psi_Sc_t_Sj[j])
-
-            phaseK = dot(Q, (r[centerB]-r[j]))
-            chi_t += 0.5/√(N/2) * exp(-im*phaseK) * inner(psi_t, psi_Sc_t_Sj)
+                phaseK = dot(Q_list[q], (r[centerB]-r[j]))
+                chi_t[q] += exp(-im*phaseK) * pBp 
+            end
         end
-        # println("Sum i Time spent: $(time()-t_sumi)")
+        println("Sum i Time spent: $(time()-t_sumi)")
         
-        chi_p[t] = chi_t 
+        # write data incase unexpected termination happend
+        if phi_t
+            phiphi = expect(psi_t, "Sz")
+
+            for q = 1:Nk
+                open(filenames[q], "a") do io 
+                    # Chi
+                    d = @sprintf("%.2f,%.10f,%.10f", t*dt, chi_t[q].re, chi_t[q].im)
+                    write(io, d)
+                    # Sz_n
+                    for n in 1:N
+                        d = @sprintf(",%.8f", phiphi[n])
+                        write(io, d)
+                    end
+                    write(io, "\n")
+                end
+            end
+        else
+            for q = 1:Nk
+                open(filenames[q], "a") do io 
+                    # Chi
+                    d = @sprintf("%.2f,%.10f,%.10f\n", t*dt, chi_t[q].re, chi_t[q].im)
+                    write(io, d)
+                end
+            end
+        end
 
         println("T step: $(t), Chi($(t*dt)) finished.")
         println("Loop Time spent: $(time()-t_start)")
+        println("Process peak RSS (GB): ", Sys.maxrss()/1.04E9)
+        GC.gc()
 
-        # write data incase unexpected termination happend
-        if phi_t
-            open(filename, "a") do io 
-                d = @sprintf("%.2f,%.10f,%.10f\n", t*dt, chi_t.re, chi_t.im)
-                write(io, d)
-            end
-        else
-            open(filename, "a") do io 
-                d = @sprintf("%.2f,%.10f,%.10f\n", t*dt, chi_t.re, chi_t.im)
-                write(io, d)
-            end
-        end
     end
 
-    chi_n = reverse(conj(chi_p))
-    chi = append!(chi_n, chi_t0, chi_p) # time grid from -T to +T
-
-    return chi
+    return 1
 end
 
 function chi_2t_FT(O1, O2, Q, r, H, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1, phi_t=false)

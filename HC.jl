@@ -12,23 +12,34 @@ let
     Total_time = time()
 
 #  -- Physical parameter setup ---
-    N = 6
-    M = 6
-    Jnn, Jnnn, DMI, h = 1, 0.1, 0.2, 0.1
+    N = 2
+    M = 2
+    Jnn, Jnnn, DMI, h = 1, 0.1, 0.0, 0.1
     ani = 0.
 
     obc_x = false 
-    obc_y = false
+    obc_y = false 
     Ox, Oy = "f", "f"
+    
+#   - obc x, pbc y -
+    # col_x = 4
+    # centerA, centerB = 1+2*M*(col_x-1), 2+2*M*(col_x-1)
+#   - obc y, pbc x -
+    row_y = 1
+    centerA, centerB = 1+2*(row_y-1), 2+2*(row_y-1)
+    # -finite T-
+    centerA *= 2
+    centerB *= 2
+#   - finite T need x2
+    # centerA, centerB = 2, 4
 
     O1, O2 = "S+", "S-"
     operators = "+-"
 
-    col_x = 4
-    centerA, centerB = 1+2*M*(col_x-1), 2+2*M*(col_x-1)
+    dynamic = false
 
 #  -- Temperature --
-    beta = 1/1
+    beta = 1
     # !!! FT 3 threads
     # !!! GS 2 threads
 
@@ -38,24 +49,73 @@ let
         K-: [1, 2]/3
         M: [1, 1]/2
     =#
-    # k1, k2 = 2, 1
-    # Q = 2*pi*(
-    #     k1/N * [1/√(3), -1/3] + 
-    #     k2/M * [0, 2/3]
-    # )
-    # Q_text = "Q$k1$k2"
+    Q_list = []
+    Q_text = []
+    n_k = 0
+
+#   - K- -
+    # x_fractions = range(0, stop=1, length=7)
+    # for q =1:length(x_fractions)
+    #     Q = 2*pi*(
+    #         x_fractions[q] * 1/3 * [1/√(3), -1/3] + 
+    #         x_fractions[q] * 2/3 * [0, 2/3]
+    #     )
+    #     push!(Q_list, Q)
+    #     n_k += 1
+    #     Qs = @sprintf("%s_%.2fK-", n_k, x_fractions[q])
+    #     push!(Q_text, Qs)
+    # end
+
+#   - M -
+    # x_fractions = range(0, stop=1, length=4)
+    # for q =2:length(x_fractions)-1
+    #     Q = 2*pi*(
+    #         (1+x_fractions[q])/3 * [1/√(3), -1/3] + 
+    #         (2-x_fractions[q])/3 * [0, 2/3]
+    #     )
+    #     push!(Q_list, Q)
+    #     n_k += 1
+    #     Qs = @sprintf("%s_%.2fM", n_k, x_fractions[q])
+    #     push!(Q_text, Qs)
+    # end
 
     Q = 2*pi*(
-        2/3 * [1/√(3), -1/3] + 
-        1/3 * [0, 2/3]
+        1/2 * [1/√(3), -1/3] + 
+        1/2 * [0, 2/3]
     )
-    Q_text = "K+"
+    push!(Q_list, Q)
+    push!(Q_text, "M_up")
+    n_k += 1
+
+    # Q = 2*pi*(
+    #     -1/2 * [1/√(3), -1/3] + 
+    #     0/2 * [0, 2/3]
+    # )
+    # push!(Q_list, Q)
+    # push!(Q_text, "-M_dw")
+    # n_k += 1
+
+#   - K+ -
+    # x_fractions = range(1, stop=0, length=4)
+    # for q = 1:length(x_fractions)-1
+    #     Q = 2*pi*(
+    #         x_fractions[q] * 2/3 * [1/√(3), -1/3] + 
+    #         x_fractions[q] * 1/3 * [0, 2/3]
+    #     )
+    #     push!(Q_list, Q)
+    #     n_k += 1
+    #     Qs = @sprintf("%s_%.2fK+", n_k, x_fractions[q])
+    #     push!(Q_text, Qs)
+    # end
+
+    println("Momenta: ", Q_text)
 
 #  -- numerical setup ---
     dmrg_sw = 5
     dmrg_linkdim = 256
     dmrg_maxdim = ones(Int, dmrg_sw) * dmrg_linkdim
-    maxdim = 10
+    maxdim = 200
+    psidim = 256
 
 #  -- evolution accuracy --
     psi_cutoff = 1E-10
@@ -135,20 +195,31 @@ let
 #  -- aucillary states --
 
     # Psi_file = @sprintf(
-    #     "./HC_data/%.i%.i_DM%.2f_Ox%s_Oy%s_b%.2f_k%.i_psi.jld2",
-    #     N, M, DMI, Ox, Oy, beta, maxdim
+    #     "./HC_data/Psi/%.i%.i_DM%.2f_Ox%s_Oy%s_b%.2f_k%.i_psi.jld2",
+    #     N, M, DMI, Ox, Oy, beta, psidim
     # )
     # Sites_file = @sprintf(
-    #     "./HC_data/%.i%.i_DM%.2f_Ox%s_Oy%s_b%.2f_k%.i_sites.jld2",
-    #     N, M, DMI, Ox, Oy, beta, maxdim
+    #     "./HC_data/Psi/%.i%.i_DM%.2f_Ox%s_Oy%s_b%.2f_k%.i_sites.jld2",
+    #     N, M, DMI, Ox, Oy, beta, psidim
     # )
+
+    # Psi_file = @sprintf(
+    #     "./HC_data/Psi/%.i%.i_nnn%.2f_DM%.2f_ani%.2f_Ox%s_Oy%s_b%.2f_k%.i_psi.jld2",
+    #     N, M, Jnnn, DMI, ani, Ox, Oy, beta, psidim
+    # )
+    # Sites_file = @sprintf(
+    #     "./HC_data/Psi/%.i%.i_nnn%.2f_DM%.2f_ani%.2f_Ox%s_Oy%s_b%.2f_k%.i_sites.jld2",
+    #     N, M, Jnnn, DMI, ani, Ox, Oy, beta, psidim
+    # )
+
     # println("Read data from: ", Psi_file)
 
     # psi_beta = load_object(Psi_file)
     # sites = load_object(Sites_file)
 
-    # H, r = H_HC(N, M, Jnn, Jnnn, DMI, h; auc=true, obc_x, obc_y)
+    # H, r = H_HC(N, M, Jnn, Jnnn, DMI, h, ani; auc=true, obc_x, obc_y)
     # H = MPO(H, sites)
+    
     
 #  -- Real space, real time --
     # BLAS.set_num_threads(1)
@@ -168,15 +239,19 @@ let
 #  -- k space, real time --
     # BLAS.set_num_threads(1)
     
-    # filename = @sprintf(
-    #     "./HC_data/Chi_%.i%.i_DM%.2f_Ox%s_Oy%s_Q%.i%.i_beta%.2f_psi%.i_Time%.i_%s.csv",
-    #     N, M, DMI, Ox, Oy, k1, k2, beta, 
-    #     Int(log10(psi_cutoff)), dtau*Tsteps, operators
-    # )
-    # println(filename)
+    # filenames = []
+    # for q = 1:length(Q_text)
+    #     filename = @sprintf(
+    #         "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_AB%.i%.i_%s_beta%.2f_Time%.i_dt%.2f_k%.i_%s.csv",
+    #         N, M, Jnnn, DMI, Ox, Oy, centerA, centerB, Q_text[q], beta, 
+    #         dtau*Tsteps, dtau/tausweep, maxdim, operators
+    #     )
+    #     println("Output file: ", filename)
+    #     push!(filenames, filename)
+    # end
 
-    # chi = chi_t_FT(O1, O2, Q, r, H, psi_beta, sites, Tsteps, dtau, filename; 
-    #     cutoff=time_cutoff, maxdim=maxdim, ns=tausweep
+    # chi = chi_t_FT(O1, O2, Q_list, r, H, psi_beta, sites, Tsteps, dtau, filenames; 
+    #     cutoff=time_cutoff, maxdim=maxdim, ns=tausweep, centerA, centerB, phi_t=dynamic
     # )
 
 #   - 
