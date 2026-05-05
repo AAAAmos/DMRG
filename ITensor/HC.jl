@@ -12,14 +12,14 @@ let
     Total_time = time()
 
 #  -- Physical parameter setup ---
-    N = 2
-    M = 2
+    N = 3
+    M = 3
     Jnn, Jnnn, DMI, h = 1, 0.1, 0.0, 0.1
     ani = 0.
 
-    obc_x = false 
+    obc_x = true 
     obc_y = false 
-    Ox, Oy = "f", "f"
+    Ox, Oy = "t", "f"
     
 #   - obc x, pbc y -
     # col_x = 4
@@ -136,7 +136,7 @@ let
     psi = MPS(Float64, sites, states)
 
 #  -- dmrg --
-    H, r = H_HC(N, M, Jnn, Jnnn, DMI, h, ani; auc=false, obc_x, obc_y)
+    H, r = H_HC(N, M, Jnn, Jnnn, DMI, h, ani; anc=false, obc_x, obc_y)
     H = MPO(H, sites)
 
     E0, psi0 = dmrg(H, psi; 
@@ -169,17 +169,17 @@ let
     # end
 
 #  -- Momentum space, real time --
-    BLAS.set_num_threads(1)
+    # BLAS.set_num_threads(1)
 
-    filename = @sprintf(
-        "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_AB%.i%.i_%s_GS_psi%.i_Time%.i_k%.i_%s.csv",
-        N, M, Jnnn, DMI, Ox, Oy, centerA, centerB, Q_text, 
-        Int(log10(psi_cutoff)), dtau*Tsteps, maxdim, operators
-    )
+    # filename = @sprintf(
+    #     "./HC_data/Chi_%.i%.i_nnn%.2f_DM%.2f_Ox%s_Oy%s_AB%.i%.i_%s_GS_psi%.i_Time%.i_k%.i_%s.csv",
+    #     N, M, Jnnn, DMI, Ox, Oy, centerA, centerB, Q_text, 
+    #     Int(log10(psi_cutoff)), dtau*Tsteps, maxdim, operators
+    # )
 
-    chi = chi_t_old(O1, O2, Q, r, H, E0, psi0, sites, Tsteps, dtau, filename; 
-        cutoff=time_cutoff, maxdim=maxdim, ns=tausweep, phi_t=false, centerA, centerB
-    )
+    # chi = chi_t_old(O1, O2, Q, r, H, E0, psi0, sites, Tsteps, dtau, filename; 
+    #     cutoff=time_cutoff, maxdim=maxdim, ns=tausweep, phi_t=false, centerA, centerB
+    # )
 
     # open(filename, "w") do io 
     #     write(io, "t,RS,IS\n")

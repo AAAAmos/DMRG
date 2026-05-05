@@ -9,7 +9,7 @@ function res(x, M) # same as % in python
     return mod(x-1, M)+1
 end
 
-function H_HC(n, m, J, j, D, h, ani; auc=false, obc_x=false, obc_y=false)
+function H_HC(n, m, J, j, D, h, ani; anc=false, obc_x=false, obc_y=false)
 
     col = m*2
     N = n*col 
@@ -19,18 +19,18 @@ function H_HC(n, m, J, j, D, h, ani; auc=false, obc_x=false, obc_y=false)
 
     os = OpSum()
 
-    # aucillary condition
-    X = (auc) ? 2 : 1
+    # ancilla condition
+    X = (anc) ? 2 : 1
 
     for a in 0:n-1 
         for b in 1:m 
 
             # build basis
-            if auc 
+            if anc 
                 push!(r, 0)
             end
             push!(r, a*a_1 + b*a_2) # A site
-            if auc 
+            if anc 
                 push!(r, 0)
             end
             push!(r, a*a_1 + b*a_2 + [√(3), 1]/2) # B site
@@ -59,7 +59,7 @@ function H_HC(n, m, J, j, D, h, ani; auc=false, obc_x=false, obc_y=false)
             os .+= -J*O_/4, "S-", ii, "S+", (col*a+res(y-1, col))*X
             # println("a NN", i, ": ", col*a+res(y-1, col), " O: ", O_)
 
-            O_ = (obc_x && i+1-col<=0) ? 0 : 1
+            O_ = (obc_x && i+1-col<1) ? 0 : 1
             os .+= -J*O_/2, "Sz", ii, "Sz", res(i+1-col, N)*X
             os .+= -J*O_/4, "S+", ii, "S-", res(i+1-col, N)*X
             os .+= -J*O_/4, "S-", ii, "S+", res(i+1-col, N)*X
@@ -73,13 +73,13 @@ function H_HC(n, m, J, j, D, h, ani; auc=false, obc_x=false, obc_y=false)
             os .+= (-j - im*D)*O_/4, "S-", ii, "S+", (col*a+res(y+2, col))*X
             # println("a NNN", ii, ": ", col*a+res(y+2, col), " O: ", O_)
 
-            O_ = (obc_y && y-2<0) ? 0 : 1
+            O_ = (obc_y && y-2<1) ? 0 : 1
             os .+= -j*O_/2, "Sz", ii, "Sz", (col*a+res(y-2, col))*X
             os .+= (-j - im*D)*O_/4, "S+", ii, "S-", (col*a+res(y-2, col))*X
             os .+= (-j + im*D)*O_/4, "S-", ii, "S+", (col*a+res(y-2, col))*X
             # println("a NNN", ii, ": ", col*a+res(y-2, col), " O: ", O_)
             
-            O_ = (obc_x && i-col<0) ? 0 : 1
+            O_ = (obc_x && i-col<1) ? 0 : 1
             os .+= -j*O_/2, "Sz", ii, "Sz", res(i-col, N)*X
             os .+= (-j + im*D)*O_/4, "S+", ii, "S-", res(i-col, N)*X
             os .+= (-j - im*D)*O_/4, "S-", ii, "S+", res(i-col, N)*X
@@ -92,7 +92,7 @@ function H_HC(n, m, J, j, D, h, ani; auc=false, obc_x=false, obc_y=false)
             # println("a NNN", ii, ": ",  res(i+col, N), " O: ", O_)
 
             O_x = (obc_x && a==n-1) ? 0 : 1
-            O_y = (obc_y && y-2<0) ? 0 : 1
+            O_y = (obc_y && y-2<1) ? 0 : 1
             os .+= (-j/2)*O_x*O_y, "Sz", ii, "Sz", res(col*(a+1)+res(y-2, col), N)*X
             os .+= (-j + im*D)*O_x*O_y/4, "S+", ii, "S-", res(col*(a+1)+res(y-2, col), N)*X
             os .+= (-j - im*D)*O_x*O_y/4, "S-", ii, "S+", res(col*(a+1)+res(y-2, col), N)*X
@@ -130,7 +130,7 @@ function H_HC(n, m, J, j, D, h, ani; auc=false, obc_x=false, obc_y=false)
             # println("b NN", i, ": ", i-1, col*a+res(y+1, col), res(i-1+col, N))
 
             # NNN
-            O_ = (obc_y && y-2<0) ? 0 : 1
+            O_ = (obc_y && y-2<1) ? 0 : 1
             os .+= (-j/2)*O_, "Sz", ii, "Sz", (col*a+res(y-2, col))*X
             os .+= (-j + im*D)*O_/4, "S+", ii, "S-", (col*a+res(y-2, col))*X
             os .+= (-j - im*D)*O_/4, "S-", ii, "S+", (col*a+res(y-2, col))*X
@@ -148,7 +148,7 @@ function H_HC(n, m, J, j, D, h, ani; auc=false, obc_x=false, obc_y=false)
             os .+= (-j - im*D)*O_/4, "S-", ii, "S+", res(i+col, N)*X
             # println("b NNN", i, ": ", res(i+col, N), " O: ", O_)
             
-            O_ = (obc_x && i-col<=0) ? 0 : 1
+            O_ = (obc_x && i-col<1) ? 0 : 1
             os .+= (-j/2)*O_, "Sz", ii, "Sz", res(i-col, N)*X
             os .+= (-j - im*D)*O_/4, "S+", ii, "S-", res(i-col, N)*X
             os .+= (-j + im*D)*O_/4, "S-", ii, "S+", res(i-col, N)*X
@@ -162,7 +162,7 @@ function H_HC(n, m, J, j, D, h, ani; auc=false, obc_x=false, obc_y=false)
             # println("a NNN", ii, ": ", res(col*(a-1)+res(y+2, col), N), " O: ", O_x, O_y)
             
             O_x = (obc_x && a==n-1) ? 0 : 1
-            O_y = (obc_y && y-2<0) ? 0 : 1
+            O_y = (obc_y && y-2<1) ? 0 : 1
             os .+= (-j/2)*O_x*O_y, "Sz", ii, "Sz", res(col*(a+1)+res(y-2, col), N)*X
             os .+= (-j - im*D)*O_x*O_y/4, "S+", ii, "S-", res(col*(a+1)+res(y-2, col), N)*X
             os .+= (-j + im*D)*O_x*O_y/4, "S-", ii, "S+", res(col*(a+1)+res(y-2, col), N)*X
@@ -651,10 +651,9 @@ function chi_t_scan(ox::Val{false}, oy::Val{true}, N, M, O1, O2, Q_list, r, H, E
     return 1
 end
 
-
 function chi_t_scan(ox::Val{true}, oy::Val{false}, N, M, O1, O2, Q_list, r, H, E0, psi0, sites, Tsteps, dt, filenames; cutoff=1e-10, maxdim=20, ns=1, centerA=1, centerB=2, phi_t=false)
 
-    M *= 2 # subsites
+    N *= 2 # subsites
     Nk = length(Q_list)
 
     println("PBC in x, OBC in y. Correlation slices in y direction!")
@@ -787,7 +786,6 @@ function chi_t_scan(ox::Val{true}, oy::Val{false}, N, M, O1, O2, Q_list, r, H, E
 
     return 1
 end
-
 
 function chi_x_t(O1, O2, Si, Sj, H, E0, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1)
 
