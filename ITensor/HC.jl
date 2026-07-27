@@ -12,9 +12,9 @@ let
     Total_time = time()
 
 #  -- Physical parameter setup ---
-    N = 3
-    M = 3
-    Jnn, Jnnn, DMI, h = 1, 0.1, 0.0, 0.1
+    N = 18
+    M = 9
+    Jnn, Jnnn, DMI, h = 1, 0.1, 0.1, 0.1
     ani = 0.
 
     obc_x = true 
@@ -115,7 +115,7 @@ let
     dmrg_linkdim = 256
     dmrg_maxdim = ones(Int, dmrg_sw) * dmrg_linkdim
     maxdim = 200
-    psidim = 256
+    psidim = 200
 
 #  -- evolution accuracy --
     psi_cutoff = 1E-10

@@ -66,6 +66,44 @@ function excitation_entanglement_center(ϕ::LeftGaugedQP)
     return C
 end
 
+function gauge_fix_mps(ψ::InfiniteMPS)
+    # Put every C[n] in Schmidt (diagonal) gauge so that excitation B tensors
+    # are computed in a canonical, run-to-run reproducible gauge.
+    #
+    # For each bond n, C[n] = U·S·Vd.  We absorb:
+    #   U  into the RIGHT virtual of AL at the site LEFT  of bond n
+    #   Vd into the LEFT  virtual of AR at the site RIGHT of bond n
+    # leaving C[n] = S (diagonal, positive, decreasing).
+    #
+    # Note: AL[n] has layout (virt_L, phys ; virt_R) and
+    #       AR[n] has layout (virt_L, phys ; virt_R) in MPSKit convention.
+    # Verify that domain(AL[n]) == codomain(U) before using in production.
+
+    N     = length(ψ)
+    new_AL = collect(ψ.AL)   # mutable copies
+    new_AR = collect(ψ.AR)
+    new_C  = [ψ.C[n] for n in 0:N-1]
+
+    for n in 0:N-1
+        U, S, Vd = svd_compact(ψ.C[n])   # C[n] = U * S * Vd
+
+        # Site to the LEFT of bond n (1-indexed, wraps for bond 0)
+        l = n == 0 ? N : n
+        # Site to the RIGHT of bond n
+        r = n + 1
+
+        # AL[l]: absorb U on the right-virtual leg (domain of AL = virt_R of site l)
+        @plansor new_AL[l][-1 -2; -3] := ψ.AL[l][-1 -2; 1] * U[1; -3]
+
+        # AR[r]: absorb Vd on the left-virtual leg (first codomain leg of AR = virt_L of site r)
+        @plansor new_AR[r][-1 -2; -3] := Vd[-1; 1] * ψ.AR[r][1 -2; -3]
+
+        new_C[n+1] = S   # 1-indexed storage; C[n] → S
+    end
+
+    return InfiniteMPS(new_AL, PeriodicVector(new_C), new_AR)
+end
+
 function merge_ops!(target, source)
     for (key, op) in source
         target[key] = get(target, key, zero(op)) + op

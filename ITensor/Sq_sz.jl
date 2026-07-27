@@ -123,30 +123,32 @@ let
     Total_time = time()
 
 #  -- Physical parameter setup ---
-    N = 5
+    N = 20
     M = 10
-    h = 0.0
+    h = 0.000001
 
-    obc_x = false
+    obc_x = true   
     obc_y = false 
-    Ox, Oy = "f", "f"
+    Ox, Oy = "t", "f"
 
 #  -- Temperature --
-    beta_list = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.53, 0.6, 0.7, 0.75, 0.8, 0.9, 1, 1.2, 1.6, 2, 2.5, 3, 3.3, 4, 5, 7, 8, 10]
+    beta_list = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.53, 0.6, 0.7, 0.75, 0.8, 0.9, 1,
+     1.2, 1.6, 2, 2.5, 3, 3.3, 3.5, 3.7, 4, 4.3, 5, 7, 10]
+    append!(beta_list, reverse(beta_list[5:length(beta_list)-1]))
     # beta_list = [0, 0.4, 0.5, 0.8, 1]
     d_beta = 0.01
 
 #  -- numerical setup ---
     dmrg_linkdim = 10
     dmrg_maxdim = [200, 200, 200, 200, 200]
-    maxdim = 50
+    maxdim = 100
 
 #  -- evolution accuracy --
-    psi_cutoff = 1E-9
+    psi_cutoff = 1E-10
     println("State cutoff: ", psi_cutoff)
     
     E_file = @sprintf(
-        "./Sq_data/Ising_%.ix%.i_h%.2f_Ox%s_Oy%s_psi%.i_QNt_k%.i.csv",
+        "./Sq_data/Ising_%.ix%.i_h%.2f_Ox%s_Oy%s_psi%.i_QNt_k%.i_rev_exp_2.csv",
         N, M, h, Ox, Oy, Int(log10(psi_cutoff)), maxdim
     )
     println("output file:", E_file)
@@ -159,41 +161,41 @@ let
 
 #  -- aucillary states --
     psi_beta, sites = trivial_state(N*M*2, QN=true) # |psi(beta=0)>
-    H, r = H_sq(N, M, h; auc=true)
+    H, r = H_sq(N, M, h; obc_x, obc_y, auc=true)
     H = MPO(H, sites)
 
     M1OP = MPO(M1_op(N*M*2), sites)
     M2OP = MPO(M2_op(N*M*2), sites)
 
+    nsites = 2
+
     for i in 1:length(beta_list)-1
 
         b = beta_list[i+1]-beta_list[i]
         beta = beta_list[i+1]
-        nsweeps = round(Int, b/d_beta)
+        nsweeps = abs(round(Int, b/d_beta))
 
-        nsites = (beta >= 0.5) && (maxlinkdim(psi_beta) == maxdim) ? 1 : 2
+        # nsites = (beta >= 0.5) && (maxlinkdim(psi_beta) == maxdim) ? 1 : 2
 
         psi_beta = tdvp(
             H, -b/2, psi_beta; 
             nsweeps=nsweeps, maxdim=maxdim, normalize=true, nsite=nsites, cutoff=psi_cutoff
             , outputlevel=1
         )
-        println("Process peak RSS (MB): ", Sys.maxrss()/1.04E6)
+        
+        # if maxlinkdim(psi_beta)<maxdim
+        #     nsites = 2
+        #     psi_beta = expand(psi_beta, H; 
+        #         alg="global_krylov", krylovdim=3, cutoff=psi_cutoff
+        #     )
+        # else 
+        #     nsites = 1
+        # end
+
+        println("Process peak RSS (GB): ", Sys.maxrss()/1.04E9)
         println("Cooldown fin.")
         println("Beta = ", beta)
         GC.gc()
-
-#   - Save psi -
-        # Psi_file = @sprintf(
-        #     "./HC_data/%.i%.i_DM%.2f_Ox%s_Oy%s_b%.2f_k%.i_psi.jld2",
-        #     N, M, DMI, Ox, Oy, beta, maxdim
-        # )
-        # save_object(Psi_file, psi_beta)
-        # Sites_file = @sprintf(
-        #     "./HC_data/%.i%.i_DM%.2f_Ox%s_Oy%s_b%.2f_k%.i_sites.jld2",
-        #     N, M, DMI, Ox, Oy, beta, maxdim
-        # )
-        # save_object(Sites_file, sites)
 
 #   - Mz, Purity, E -
         Mz = inner(psi_beta', M1OP, psi_beta; cutoff=psi_cutoff)

@@ -7,10 +7,10 @@ include("iDMRG.jl")
 let 
 
     initial_time = time()
-    BLAS.set_num_threads(1)
+    # BLAS.set_num_threads(1)
 
 #  -- Physical parameter setup ---
-    Ny = 5
+    Ny = 4
     N_sites = 2Ny 
     Jnn, Jnnn, DMI, h = 1, 0.1, 0.1, 1.1
     ani = 0.
@@ -103,6 +103,11 @@ let
     total_bd      = dim(V_gs)
     println("Per-sector bond dims: ", join(["$(c.charge)→$(d)" for (c,d) in zip(qn_sectors_gs, χ_gs)], "  "))
 
+    # ── Gauge-fix: make every C[n] diagonal so B tensors from QuasiparticleAnsatz
+    #    are computed in a canonical gauge (reproducible entanglement spectra).
+    ψ    = gauge_fix_mps(ψ)
+    envs = environments(ψ, H)
+
     # ── Build all shifted environments ───────────────────────────────
     # For a unit cell of size N_sites, need N_sites different insertion points
     ψ_shifts = [circshift(ψ, k) for k in 0:N_sites-1]
@@ -150,7 +155,7 @@ let
     println("Time for entanglement spectra: ", time() - entangle_time, " seconds")
 
 # --- Save data ---
-    filename = @sprintf("VUMPS_HC_Ny%d_Jnn%.2f_Jnnn%.2f_DMI%.2f_h%.2f_ani%.2f_Oy%s_QNt_dim%d_1.csv",
+    filename = @sprintf("VUMPS_HC_Ny%d_Jnn%.2f_Jnnn%.2f_DMI%.2f_h%.2f_ani%.2f_Oy%s_QNt_dim%d_fix1.csv",
         Ny, Jnn, Jnnn, DMI, h, ani, Oy, total_bd
     )
     @info "Saving data to $filename"
