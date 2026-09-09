@@ -38,7 +38,7 @@ include("DSF_hc.jl")
 # ==============================================================================
 
 function taylor_rho0(H::MPO, τ::Float64, sites;
-                      order::Int=16, cutoff::Float64=1e-13, maxdim::Int=800)
+                      order::Int=16, cutoff=1e-10, maxdim::Int=800)
     "Build rho0 = e^{-tau*H} as an MPO via a truncated Taylor series:
     rho0 = sum_{k=0}^{order} (-tau)^k/k! H^k, computed by the recursion
     term_k = (-tau/k)*H*term_{k-1}, term_0 = Id."
@@ -52,10 +52,8 @@ function taylor_rho0(H::MPO, τ::Float64, sites;
         ρ    = +(ρ, term; cutoff=cutoff, maxdim=maxdim)
         nrm = norm(term)
         println("    Taylor order $k:  |term| = $(round(nrm, sigdigits=4)),  chi(rho) = $(maxlinkdim(ρ))")
-        if k > 3 && nrm < cutoff
-            break
-        end
     end
+    
     return ρ
 end
 
@@ -72,7 +70,7 @@ function mpo_trace(A::MPO, sites)
 end
 
 "<O> = Tr(rho*O)/Tr(rho)."
-function mpo_expect(ρ::MPO, O::MPO, sites; cutoff::Float64=1e-12, maxdim::Int=2000)
+function mpo_expect(ρ::MPO, O::MPO, sites; cutoff=1e-12, maxdim::Int=2000)
     ρO = apply(ρ, O; cutoff=cutoff, maxdim=maxdim)
     return mpo_trace(ρO, sites) / mpo_trace(ρ, sites)
 end
@@ -84,12 +82,29 @@ let
 #  -- Physical parameter setup ---
     N = 2
     M = 2
-    Jnn, Jnnn, DMI, h = 1, 0.1, 0., 0.1
+    Jnn, Jnnn, DMI, h = 1, 0.1, 0.1, 0.1
     ani = 0.
 
-    obc_x = true
+    obc_x = true 
     obc_y = false
     Ox, Oy = "t", "f"
+    
+#  -- Spin current --
+    SC = true
+
+    if SC 
+
+        SCsites = []
+
+        for col in 0:N-1
+            x = M + col*2M
+            append!(SCsites, [[x, x+2], [x+1, x-1]])
+        end
+        
+        SCsites = unique(SCsites)
+        @show SCsites
+
+    end
 
 #  -- numerical setup ---
     QN_conservation = true
@@ -102,17 +117,33 @@ let
     beta_final = beta_unit * 2.0^m
     println("This run: beta_unit(tau0) = $beta_unit, m = $m  ->  beta_final = $beta_final")
 
-    taylor_order    = 16
-    rho_cutoff      = 1E-12
-    rho_maxdim      = 400     # MPO bond dim for rho 
-    save_every_step = true    # record beta_unit*2^n for every n=0..m (essentially free -- rho_n is already built on the way to rho_m)
+    taylor_order    = 8
+    rho_cutoff      = 0
+    rho_cutoff_text = (rho_cutoff == 0) ? 0 : Int(log10(rho_cutoff))
+    rho_maxdim      = 256     # MPO bond dim for rho 
+    save_every_step = true    # record beta_unit*2^n for every n=0..m 
     save_final_rho  = false    # also dump the final MPO + sites to disk via JLD2
 
 #  -- files (tagged by beta_unit & m so parallel jobs never collide) --
     E_file = @sprintf(
-        "../HC_data/%.i%.i_nnn%.2f_DM%.2f_h%.2f_Ox%s_Oy%s_tau%.4f_m%.i_k%.i_xtrg.csv",
-        N, M, Jnnn, DMI, h, Ox, Oy, beta_unit, m, rho_maxdim
+        "../HC_data/%.i%.i_nnn%.2f_DM%.2f_h%.2f_Ox%s_Oy%s_tau%.4f_m%.i_k%.i_cut%.i_xtrg_ty8.csv",
+        N, M, Jnnn, DMI, h, Ox, Oy, beta_unit, m, rho_maxdim, rho_cutoff_text
     )
+    open(E_file, "w") do io 
+        write(io, "beta,E,Sz,M2,dim")
+
+        for i in 1:2M:2N*M
+            write(io, ",Sz$i")
+        end
+
+        if SC
+            for pairs in SCsites 
+                d = @sprintf(",S+%.i S-%.i", pairs[1], pairs[2])
+                write(io, d)
+            end
+        end
+        write(io, "\n")
+    end
 
 # --- finite T (XTRG) ---
 
@@ -123,6 +154,14 @@ let
     H = MPO(Hos, sites)
     M1OP = MPO(M1_op(N*M*2; anc=false), sites)
     M2OP = MPO(M2_op(N*M*2; anc=false), sites)
+    if SC
+        Op_list = []
+        for pairs in SCsites 
+            os = OpSum()
+            os += 1.0, "S+", pairs[1], "S-", pairs[2]
+            push!(Op_list, MPO(os, sites))
+        end
+    end
 
     function measure_and_write(rho_n::MPO, beta_n::Float64)
         Mz     = mpo_expect(rho_n, M1OP, sites)
@@ -131,8 +170,24 @@ let
         dim    = maxlinkdim(rho_n)
 
         open(E_file, "a") do io
-            d = @sprintf("%.6f,%.10f,%.10f,%.10f,%.i\n", beta_n, real(E_n), real(Mz), real(M2v), dim)
+
+            d = @sprintf("%.6f,%.10f,%.10f,%.10f,%.i", beta_n, real(E_n), real(Mz), real(M2v), dim)
             write(io, d)
+
+            for i in 1:2M:2N*M
+                os = OpSum()
+                os += 1.0, "Sz", i
+                sz = mpo_expect(rho_n, MPO(os, sites), sites; cutoff=rho_cutoff)
+                write(io, @sprintf(",%.6f", real(sz)))
+            end
+
+            if SC 
+                for op in Op_list
+                    exp_val = mpo_expect(rho_n, op, sites; cutoff=rho_cutoff)
+                    write(io, @sprintf(",%.8f", real(exp_val)))
+                end
+            end
+            write(io, "\n")
         end
 
         println("  beta = $beta_n   E = $E_n   chi = $dim")

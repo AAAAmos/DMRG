@@ -1,3 +1,69 @@
+struct SpinThreeHalf end 
+
+function ITensors.space(::SiteType"S=3/2"; conserve_qns=false)
+    if conserve_qns
+        return [QN("Sz",3)=>1,QN("Sz",1)=>1,
+                QN("Sz",-1)=>1,QN("Sz",-3)=>1]
+    end
+    return 4
+end
+
+ITensors.op(::OpName"Sz",::SiteType"S=3/2") =
+  [+3/2   0    0    0
+     0  +1/2   0    0
+     0    0  -1/2   0
+     0    0    0  -3/2]
+
+ITensors.op(::OpName"S+",::SiteType"S=3/2") =
+  [0  √3  0  0
+   0   0  2  0
+   0   0  0 √3
+   0   0  0  0]
+
+ITensors.op(::OpName"S-",::SiteType"S=3/2") =
+  [0   0  0   0
+   √3  0  0   0
+   0   2  0   0
+   0   0  √3  0]
+
+ITensors.state(::StateName"Up32", ::SiteType"S=3/2") = [1.0, 0, 0, 0]  # Sz = +3/2
+ITensors.state(::StateName"Up12", ::SiteType"S=3/2") = [0, 1.0, 0, 0]  # Sz = +1/2
+ITensors.state(::StateName"Dn12", ::SiteType"S=3/2") = [0, 0, 1.0, 0]  # Sz = -1/2
+ITensors.state(::StateName"Dn32", ::SiteType"S=3/2") = [0, 0, 0, 1.0]  # Sz = -3/2
+
+ITensors.val(::ValName"Up32", ::SiteType"S=3/2") = 1
+ITensors.val(::ValName"Up12", ::SiteType"S=3/2") = 2
+ITensors.val(::ValName"Dn12", ::SiteType"S=3/2") = 3
+ITensors.val(::ValName"Dn32", ::SiteType"S=3/2") = 4
+
+function trivial_state(::SpinThreeHalf, N; QN=false)
+
+    sites = siteinds("S=3/2", N; conserve_qns=QN)
+
+    states = [isodd(n) ? "Up32" : "Dn32" for n in 1:N]
+    psi = MPS(Float64, sites, states)
+
+    gates = ITensor[]
+    for j in 1:2:N-1
+        s1 = siteind(psi, j)
+        s2 = siteind(psi, j+1)
+
+        g = ITensor(dag(s1), dag(s2), s1', s2')
+        # Map |+3/2,-3/2⟩ → 1/2(|+3/2,-3/2⟩ + |+1/2,-1/2⟩ + |-1/2,+1/2⟩ + |-3/2,+3/2⟩)
+        g[s1=>"Up32", s2=>"Dn32", s1'=>"Up32", s2'=>"Dn32"] = 0.5
+        g[s1=>"Up32", s2=>"Dn32", s1'=>"Up12", s2'=>"Dn12"] = 0.5
+        g[s1=>"Up32", s2=>"Dn32", s1'=>"Dn12", s2'=>"Up12"] = 0.5
+        g[s1=>"Up32", s2=>"Dn32", s1'=>"Dn32", s2'=>"Up32"] = 0.5
+
+        push!(gates, g)
+    end
+
+    psi = apply(gates, psi; cutoff=1e-10)
+    psi = noprime(psi)
+
+    println("Spin 3/2 EPR state fin.")
+    return psi, sites
+end
 
 function chi_x_t(O1, O2, Si, Sj, H, E0, psi0, sites, Tsteps, dt, filename; cutoff=1e-10, maxdim=20, ns=1)
 

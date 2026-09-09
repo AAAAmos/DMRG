@@ -1,47 +1,10 @@
 using ITensors
 using ITensorMPS
 using LinearAlgebra: svd, dot
+# include("function_archive.jl")
 
 struct SpinHalf end 
 struct SpinOne end 
-struct SpinThreeHalf end 
-
-function ITensors.space(::SiteType"S=3/2"; conserve_qns=false)
-    if conserve_qns
-        return [QN("Sz",3)=>1,QN("Sz",1)=>1,
-                QN("Sz",-1)=>1,QN("Sz",-3)=>1]
-    end
-    return 4
-end
-
-ITensors.op(::OpName"Sz",::SiteType"S=3/2") =
-  [+3/2   0    0    0
-     0  +1/2   0    0
-     0    0  -1/2   0
-     0    0    0  -3/2]
-
-ITensors.op(::OpName"S+",::SiteType"S=3/2") =
-  [0  √3  0  0
-   0   0  2  0
-   0   0  0 √3
-   0   0  0  0]
-
-ITensors.op(::OpName"S-",::SiteType"S=3/2") =
-  [0   0  0   0
-   √3  0  0   0
-   0   2  0   0
-   0   0  √3  0]
-
-ITensors.state(::StateName"Up32", ::SiteType"S=3/2") = [1.0, 0, 0, 0]  # Sz = +3/2
-ITensors.state(::StateName"Up12", ::SiteType"S=3/2") = [0, 1.0, 0, 0]  # Sz = +1/2
-ITensors.state(::StateName"Dn12", ::SiteType"S=3/2") = [0, 0, 1.0, 0]  # Sz = -1/2
-ITensors.state(::StateName"Dn32", ::SiteType"S=3/2") = [0, 0, 0, 1.0]  # Sz = -3/2
-
-ITensors.val(::ValName"Up32", ::SiteType"S=3/2") = 1
-ITensors.val(::ValName"Up12", ::SiteType"S=3/2") = 2
-ITensors.val(::ValName"Dn12", ::SiteType"S=3/2") = 3
-ITensors.val(::ValName"Dn32", ::SiteType"S=3/2") = 4
-
 
 function trivial_state(::SpinHalf, N; QN=false)
 
@@ -101,36 +64,6 @@ function trivial_state(::SpinOne, N; QN=false)
     println("Spin 1 EPR state fin.")
     return psi, sites
 end
-
-function trivial_state(::SpinThreeHalf, N; QN=false)
-
-    sites = siteinds("S=3/2", N; conserve_qns=QN)
-
-    states = [isodd(n) ? "Up32" : "Dn32" for n in 1:N]
-    psi = MPS(Float64, sites, states)
-
-    gates = ITensor[]
-    for j in 1:2:N-1
-        s1 = siteind(psi, j)
-        s2 = siteind(psi, j+1)
-
-        g = ITensor(dag(s1), dag(s2), s1', s2')
-        # Map |+3/2,-3/2⟩ → 1/2(|+3/2,-3/2⟩ + |+1/2,-1/2⟩ + |-1/2,+1/2⟩ + |-3/2,+3/2⟩)
-        g[s1=>"Up32", s2=>"Dn32", s1'=>"Up32", s2'=>"Dn32"] = 0.5
-        g[s1=>"Up32", s2=>"Dn32", s1'=>"Up12", s2'=>"Dn12"] = 0.5
-        g[s1=>"Up32", s2=>"Dn32", s1'=>"Dn12", s2'=>"Up12"] = 0.5
-        g[s1=>"Up32", s2=>"Dn32", s1'=>"Dn32", s2'=>"Up32"] = 0.5
-
-        push!(gates, g)
-    end
-
-    psi = apply(gates, psi; cutoff=1e-10)
-    psi = noprime(psi)
-
-    println("Spin 3/2 EPR state fin.")
-    return psi, sites
-end
-
 
 function H_HC(n, m, J, j, D, h, ani; anc=false, obc_x=false, obc_y=false)
     
@@ -337,6 +270,7 @@ function M2_op(N; anc=true)
     return os
 end
 
+# ------
 
 function chi_t_scan(ox, oy, centerA, centerB, N, M, O1, O2, Q_list, r, H, E0, psi0, sites, Tsteps, dt, filenames; kwargs...)
     if centerA == centerB
@@ -1173,4 +1107,4 @@ function chi_t_FT_scan(ox::Val{true}, oy::Val{false}, N, M, O1, O2, Q_list, r, H
     return 1
 end
 
-
+# ------
